@@ -18,9 +18,10 @@ contract Lottery
     }
 
     /// Increase the deposite of the escrow account
-    function increase() public payable {
+    function increase() public payable returns (uint) {
         Escrow storage esc = accounts[msg.sender];
         esc.deposite += msg.value;
+        return esc.deposite;
     }
 
     function verify(bytes lottery, bytes signature) public returns (bool success, string err) {
