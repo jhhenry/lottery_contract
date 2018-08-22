@@ -7,6 +7,8 @@ contract Lottery
     }
 
     mapping(address => Escrow) accounts;
+    uint8 power = 18;
+    uint32 faceValue = 1E8; // unit is wei
 
     /// Get escrow by account address
     function getEscrow(address account) public view returns (uint deposite)
@@ -21,12 +23,32 @@ contract Lottery
         esc.deposite += msg.value;
     }
 
+    function verify(bytes lottery, bytes signature) public returns (bool success, string err) {
+        address addr = verifySig(signature, lottery);
+        if (addr == 0x00) {
+            success = false;
+            err = "invalid signature of the lottery";
+            return (success, err);
+        }
+
+        (bytes1 ver, bytes memory rs1, bytes memory rs2, bytes32 hashRs1, address dest) = splitLottery(lottery); 
+        if (dest == 0x00) {
+            dest = msg.sender;
+        }
+
+        require(hashRs1 == sha256(rs1), "Hash of the random string 1 does not match.");
+        if (verifyLottery(uint8(ver), rs1, rs2, hashRs1)) {
+            Escrow storage esc = accounts[addr];
+            esc.deposite -= faceValue;
+            dest.transfer(faceValue);
+        }
+    }
+
     /// Verify if a lottery wins and tranfer its face value to the winner
-    function transferIfWin(uint8 ver, bytes rs1, bytes rs2, bytes32 hashRS1, bytes sig, uint8 n) public pure returns (bool)
+    function verifyLottery(uint8 ver, bytes rs1, bytes rs2, bytes32 hashRS1) public view returns (bool)
     {
         require(ver == 0, "Version must be 0");
         require(sha256(rs1) == hashRS1, "The random string 1 or its hash supplied is incorrect.");
-        require(n > 0, "The probability parameter must be greater than 0.");
         bytes memory rs1Rs2 = new bytes(rs1.length + rs2.length);
         for (uint8 i = 0; i < rs1.length; i++) {
             rs1Rs2[i] = rs1[i];
@@ -39,7 +61,7 @@ contract Lottery
         bytes32 hashRs1Rs2 = sha256(rs1Rs2);
         bytes32 hashRs2 = sha256(rs2);
 
-        return verifyXOR(hashRs1Rs2, hashRs2, n);
+        return verifyXOR(hashRs1Rs2, hashRs2, power);
     }
 
     function verifyXOR(bytes32 hRs1Rs2, bytes32 hRs2, uint8 n) internal pure returns (bool ret)
@@ -98,6 +120,31 @@ contract Lottery
         }
 
         return (v, r, s);
+    }
+
+    function splitLottery(bytes memory lottery) internal pure 
+    returns (bytes1 ver, bytes rs1, bytes rs2, bytes32 hashRs1, address addr)
+    {
+        ver = lottery[0];
+        require(ver == 0, "Only version 0 is supported.");
+       
+        uint8 len1 = uint8(lottery[1]);
+        uint8 len2 = uint8(lottery[2]);
+        rs1 = new bytes(len1);
+        rs2 = new bytes(len2);
+        for (uint8 i = 0; i < len1; i++) {
+            rs1[i] = lottery[i + 3];
+        }
+        
+        for (i = 0; i < len2; i++) {
+            rs2[i] = lottery[i + len1 + 3];
+        }
+        uint8 offset = len1 + len2 + 3;
+        assembly {
+           hashRs1 := mload(add(lottery, add(32, offset)))
+           offset := add(offset, 52)
+           addr := mload(add(lottery, offset))
+        }
     }
 
 
