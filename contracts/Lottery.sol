@@ -25,7 +25,7 @@ contract Lottery
         //even if "returns balance" is used. balance = esc.deposite;
     }
 
-    function verify(bytes lottery, bytes signature) public returns (bool success, string err) {
+    function verify(bytes lottery, bytes signature, bytes winningData) public returns (bool success, string err) {
         address addr = verifySig(signature, lottery);
         if (addr == 0x00) {
             success = false;
@@ -33,13 +33,13 @@ contract Lottery
             return (success, err);
         }
 
-        (bytes1 ver, bytes memory rs1, bytes memory rs2, bytes32 hashRs1, address dest) = splitLottery(lottery); 
+        (bytes1 ver, bytes memory rs2, bytes32 hashRs1, address dest) = splitLottery2(lottery); 
         if (dest == 0x00) {
             dest = msg.sender;
         }
 
-        require(hashRs1 == sha256(rs1), "Hash of the random string 1 does not match.");
-        if (verifyLottery(uint8(ver), rs1, rs2)) {
+        require(hashRs1 == sha256(winningData), "Hash of the random string 1 does not match.");
+        if (verifyLottery(uint8(ver), winningData, rs2)) {
             Escrow storage esc = accounts[addr];
             esc.deposite -= faceValue;
             dest.transfer(faceValue);
@@ -124,29 +124,26 @@ contract Lottery
         return (v, r, s);
     }
 
-    function splitLottery(bytes memory lottery) internal pure 
-    returns (bytes1 ver, bytes rs1, bytes rs2, bytes32 hashRs1, address addr)
+    function splitLottery2(bytes memory lottery) internal pure 
+    returns (bytes1 ver, bytes rs2, bytes32 hashRs1, address addr)
     {
         ver = lottery[0];
         require(ver == 0, "Only version 0 is supported.");
        
-        uint8 len1 = uint8(lottery[1]);
-        uint8 len2 = uint8(lottery[2]);
-        rs1 = new bytes(len1);
-        rs2 = new bytes(len2);
+        uint8 len1 = uint8(lottery[1]); // len of rs2
+        rs2 = new bytes(len1);
         for (uint8 i = 0; i < len1; i++) {
-            rs1[i] = lottery[i + 3];
+            rs2[i] = lottery[i + 2];
         }
-        
-        for (i = 0; i < len2; i++) {
-            rs2[i] = lottery[i + len1 + 3];
-        }
-        uint8 offset = len1 + len2 + 3;
+
+        uint8 offset = len1 + 2;
         assembly {
            hashRs1 := mload(add(lottery, add(32, offset)))
            offset := add(offset, 52)
            addr := mload(add(lottery, offset))
         }
+        
+        
     }
 
 
