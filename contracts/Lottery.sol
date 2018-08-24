@@ -18,10 +18,11 @@ contract Lottery
     }
 
     /// Increase the deposite of the escrow account
-    function increase() public payable returns (uint) {
+    function increase() public payable {
         Escrow storage esc = accounts[msg.sender];
         esc.deposite += msg.value;
-        return esc.deposite;
+        //from experiment it looks the function always returns nothing
+        //even if "returns balance" is used. balance = esc.deposite;
     }
 
     function verify(bytes lottery, bytes signature) public returns (bool success, string err) {
@@ -38,7 +39,7 @@ contract Lottery
         }
 
         require(hashRs1 == sha256(rs1), "Hash of the random string 1 does not match.");
-        if (verifyLottery(uint8(ver), rs1, rs2, hashRs1)) {
+        if (verifyLottery(uint8(ver), rs1, rs2)) {
             Escrow storage esc = accounts[addr];
             esc.deposite -= faceValue;
             dest.transfer(faceValue);
@@ -46,10 +47,10 @@ contract Lottery
     }
 
     /// Verify if a lottery wins and tranfer its face value to the winner
-    function verifyLottery(uint8 ver, bytes rs1, bytes rs2, bytes32 hashRS1) public view returns (bool)
+    function verifyLottery(uint8 ver, bytes rs1, bytes rs2) private view returns (bool)
     {
         require(ver == 0, "Version must be 0");
-        require(sha256(rs1) == hashRS1, "The random string 1 or its hash supplied is incorrect.");
+       // require(sha256(rs1) == hashRS1, "The random string 1 or its hash supplied is incorrect.");
         bytes memory rs1Rs2 = new bytes(rs1.length + rs2.length);
         for (uint8 i = 0; i < rs1.length; i++) {
             rs1Rs2[i] = rs1[i];
