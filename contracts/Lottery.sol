@@ -8,7 +8,7 @@ contract Lottery
 
     mapping(address => Escrow) accounts;
     uint8 power = 18;
-    uint32 faceValue = 1E8; // unit is wei
+    uint256 faceValue = 10 finney;
 
     /// Get escrow by account address
     function getEscrow(address account) public view returns (uint deposite)
@@ -25,29 +25,52 @@ contract Lottery
         //even if "returns balance" is used. balance = esc.deposite;
     }
 
-    function verify(bytes lottery, bytes signature, bytes winningData) public returns (bool success, string err) {
+    function verify(bytes lottery, bytes signature, bytes winningData) public returns (bool success){
         address addr = verifySig(signature, lottery);
-        if (addr == 0x00) {
-            success = false;
-            err = "invalid signature of the lottery";
-            return (success, err);
-        }
-
-        (bytes1 ver, bytes memory rs2, bytes32 hashRs1, address dest) = splitLottery2(lottery); 
+        require (addr != 0x00, "Signature verification failed");
+        (bytes1 ver, bytes memory rs2, bytes32 hashRs1, address dest) = splitLottery(lottery); 
         if (dest == 0x00) {
             dest = msg.sender;
         }
-
-        require(hashRs1 == sha256(winningData), "Hash of the random string 1 does not match.");
+        require(verifyRs1Hash(winningData, hashRs1), "Hash of the random string 1 does not match.");
         if (verifyLottery(uint8(ver), winningData, rs2)) {
-            Escrow storage esc = accounts[addr];
-            esc.deposite -= faceValue;
-            dest.transfer(faceValue);
+            success = transfer(addr, dest);
+        } else {
+            success = false;
         }
     }
+    
+    function transfer(address source, address dest) public returns (bool ret){
+        Escrow storage esc = accounts[source];
+        if (esc.deposite >= faceValue) {
+            esc.deposite -= faceValue;
+            dest.transfer(faceValue);
+            ret = true;
+        }
+    }
+    
+    function verifySig(bytes memory signature, bytes memory lottery) internal pure returns (address addr) {
+        bytes32 prefixedHashed = prefixed(keccak256(lottery));
+        addr = recoverSigner(prefixedHashed, signature);
+    }
+    
+    function verifyRs1Hash(bytes rs1, bytes32 hashRs1) internal pure returns (bool eq) {
+        eq = false;
+        bytes32 actual = getHash(rs1);
+        eq = (hashRs1 == actual);
+    }
+    
+    function getHash(bytes data) internal pure returns (bytes32 h) {
+        h = keccak256(data);
+    }
+    
+    // sha256 does not work in production environment, though it works in evm.
+    // function getSHA256(bytes data) public pure returns (bytes32 h) {
+    //     h = sha256(data);
+    // }
 
     /// Verify if a lottery wins and tranfer its face value to the winner
-    function verifyLottery(uint8 ver, bytes rs1, bytes rs2) private view returns (bool)
+    function verifyLottery(uint8 ver, bytes rs1, bytes rs2) internal view returns (bool)
     {
         require(ver == 0, "Version must be 0");
        // require(sha256(rs1) == hashRS1, "The random string 1 or its hash supplied is incorrect.");
@@ -60,8 +83,8 @@ contract Lottery
             rs1Rs2[i + offset] = rs2[i];
         }
 
-        bytes32 hashRs1Rs2 = sha256(rs1Rs2);
-        bytes32 hashRs2 = sha256(rs2);
+        bytes32 hashRs1Rs2 = getHash(rs1Rs2);
+        bytes32 hashRs2 = getHash(rs2);
 
         return verifyXOR(hashRs1Rs2, hashRs2, power);
     }
@@ -85,10 +108,7 @@ contract Lottery
         }
     }
 
-    function verifySig(bytes memory signature, bytes memory lottery) internal pure returns (address addr) {
-        bytes32 prefixedHashed = prefixed(keccak256(lottery));
-        addr = recoverSigner(prefixedHashed, signature);
-    }
+   
 
     function recoverSigner(bytes32 message, bytes memory sig)
         internal
@@ -124,7 +144,7 @@ contract Lottery
         return (v, r, s);
     }
 
-    function splitLottery2(bytes memory lottery) internal pure 
+    function splitLottery(bytes memory lottery) internal pure 
     returns (bytes1 ver, bytes rs2, bytes32 hashRs1, address addr)
     {
         ver = lottery[0];
