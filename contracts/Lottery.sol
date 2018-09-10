@@ -41,7 +41,7 @@ contract Lottery
         address issuer = verifySig(signature, lottery);
         require (issuer != 0x00, "Signature verification failed");
         (bytes1 ver, bytes memory rs2, bytes32 hashRs1, address dest, uint64 time) = splitLottery(lottery); 
-         if (dest == 0x00) {
+        if (dest == 0x00) {
             dest = msg.sender;
         }
 
@@ -63,9 +63,9 @@ contract Lottery
         }
     }
     
-    function transfer(address source, address dest) public returns (bool ret){
-         Escrow storage esc = accounts[source];
-         if (esc.deposite >= faceValue) {
+    function transfer(address source, address dest) private returns (bool ret){
+        Escrow storage esc = accounts[source];
+        if (esc.deposite >= faceValue) {
             esc.deposite -= faceValue;
             dest.transfer(faceValue);
             ret = true;
