@@ -6,6 +6,7 @@ contract Lottery
     event RedeemedLotttery(bytes lottery, uint64 issuingTime, uint256 faceValue, address issuer, address winner);
     struct Escrow {
         uint deposite;
+        bool unLocked; // when locked the owner cannot withdraw his/her deposite.
     }
     
     struct Stub {
@@ -14,12 +15,23 @@ contract Lottery
         bytes32 h2;// hash of random string1 + random string2
     }
 
+    address creator;
     mapping(address => Escrow) accounts;
     mapping(address => Stub[10]) stubsMapping; // lottery issuer to lottery stub
     mapping(address => uint8) stubsIndex; // each index store where the stub is stored
     
     uint8 power = 18;
     uint256 faceValue = 10 finney; // unit is wei
+    uint256 minimalEscrow = 100 finney;
+
+    modifier admin {
+        require(msg.sender == creator, "Only administrator, aka the contract creator, can call this method");
+        _;
+    }
+
+    constructor() public {
+        creator = msg.sender;
+    }
 
     /// Get escrow by account address
     function getEscrow(address account) public view returns (uint256 deposite)
@@ -62,12 +74,47 @@ contract Lottery
             success = false;
         }
     }
+
+    /// If the escrow is locked, withdraw will fail.
+    /// To unlock the account, it requires the admin account to call the "unlock" method.
+    /// The user cannot withdraw all escrowed money using this method; the minimal left
+    /// is 100 finey.
+    /// To withdraw all money, it requires the admin account to call the "withdrawAll" method.
+    function withdraw(uint amount) public returns (bool success) {
+        Escrow storage esc = accounts[msg.sender];
+        if (esc.unLocked) {
+            uint a = amount;
+            if (amount > esc.deposite - minimalEscrow) {
+                a = esc.deposite - minimalEscrow;
+            }
+            esc.deposite -= a;
+            msg.sender.transfer(a);
+            success = true;
+        }
+    }
+
+    function withdrawAll(address addr) public admin {
+        Escrow storage esc = accounts[addr];
+        if (esc.deposite > 0) {
+            addr.transfer(esc.deposite);
+        }
+    }
+
+    function unLock(address addr) public admin {
+        Escrow storage esc = accounts[addr];
+        esc.unLocked = true;
+    }
+
+    function lock(address addr) public admin {
+        Escrow storage esc = accounts[addr];
+        esc.unLocked = true;
+    }
     
     function transfer(address source, address dest) private returns (bool ret){
         Escrow storage esc = accounts[source];
         if (esc.deposite >= faceValue) {
             esc.deposite -= faceValue;
-            dest.transfer(faceValue);
+            accounts[dest].deposite += faceValue;
             ret = true;
         }
     }
@@ -112,7 +159,6 @@ contract Lottery
                 break;
             }
         }
-
     }
     
     function storeStub(address issuer, bytes32 hashRs1, bytes32 hashRs1Rs2) internal  {
@@ -135,7 +181,7 @@ contract Lottery
         for ( i = 0; i < rs2.length; i++) {
             rs1Rs2[i + offset] = rs2[i];
         }
-        hashRs1Rs2= getHash(rs1Rs2);
+        hashRs1Rs2 = getHash(rs1Rs2);
     }
 
     function verifyXOR(bytes32 hRs1Rs2, bytes32 hRs2, uint8 n) internal pure returns (bool ret)
