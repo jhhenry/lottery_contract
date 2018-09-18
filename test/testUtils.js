@@ -17,14 +17,12 @@ function delayedGetReceipt(web3, tx, resolve, reject, timeout, maxTimes, level =
     console.log(level + "th trying to get tx receipt")
     if (!receipt) {
         setTimeout(function () {
-            receipt = delayedGetReceipt(web3, tx, resolve, reject, timeout, --maxTimes, ++level)
+            delayedGetReceipt(web3, tx, resolve, reject, timeout, --maxTimes, ++level)
         }, 5000
         )
     } else {
         resolve();
     }
-
-    return receipt;
 }
 
 module.exports = getReceiptPromise
