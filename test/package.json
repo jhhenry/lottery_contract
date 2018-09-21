@@ -1,0 +1,25 @@
+{
+  "name": "lottery_contract",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "ava --verbose *.test.js "
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jhhenry/lottery_contract.git"
+  },
+  "author": "jhhenry",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jhhenry/lottery_contract/issues"
+  },
+  "homepage": "https://github.com/jhhenry/lottery_contract#readme",
+  "devDependencies": {
+	"ava": "^1.0.0-beta.8"
+  }
+}
