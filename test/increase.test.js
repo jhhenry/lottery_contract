@@ -20,14 +20,13 @@ test.before("initialize a existing lottery contract", t => {
 
 test('test increase and then getEscrow', async t => {
 	const lottery = t.context.lottery;
+	const initE = lottery.getEscrow(lottery_issuer);
 	const txn = lottery.increase({from: lottery_issuer, value: web3.toWei('10', 'ether')});
 	const r =  await txnUtils.getReceiptPromise(web3, txn, 60);
 	//console.log(`r: ${r}`);
-	t.true(!isNullOrUndefined(r), `The receipt of ${txn} should not be null.`);
-});
+	t.truthy(r, `The receipt of ${txn} should not be null.`);
 
-test('bar', async t => {
-	const bar = Promise.resolve('bar');
+	const secondE = lottery.getEscrow(lottery_issuer);
+	t.is(web3.fromWei(secondE.minus(initE), "ether").toNumber(), 10, "the escrow is not actually increased.");
 
-	t.is(await bar, 'bar');
 });

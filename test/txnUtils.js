@@ -13,7 +13,7 @@ function delayedGetReceipt(web3, tx, resolve, reject, timeout, maxTimes, level =
 		return;
 	}
 	let receipt = web3.eth.getTransactionReceipt(tx);
-	console.log(level + "th trying to get tx receipt")
+	//console.log(level + "th trying to get tx receipt")
 	if (!receipt) {
 		setTimeout(function () {
 			delayedGetReceipt(web3, tx, resolve, reject, timeout, --maxTimes, ++level)
