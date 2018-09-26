@@ -9,8 +9,8 @@ function retryPromise(doSth, timeout) {
 function retrySth(doSth, resolve, reject, timeout, maxTimes, level = 1) {
 	
 	let receipt = doSth();
-	//console.log(level + "th trying to get tx receipt")
 	if (!receipt) {
+		//console.log("wait for result:", receipt);
 		if (maxTimes <= 0) {
 			reject(receipt);
 			return;
