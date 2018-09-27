@@ -8,6 +8,7 @@
   },
   "scripts": {
     "deploy": "node deploy.js",
+    "pretest": "node deploy.js",
     "test": "ava --verbose *.test.js "
   },
   "repository": {

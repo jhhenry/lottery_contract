@@ -1,19 +1,31 @@
-console.log('Start deploying the lottery contract...');
+const fs = require('fs')
 const web3 = require('./web3Utils');
-const txnUtils = require( './txnUtils.js');
-const accounts = web3.eth.accounts;
+const deployInfo = require('./deployInfo');
 
-var isInit = false;
-var lotteryContract;
-var lottery;
-function init() {
-	if (isInit) return;
-	/* unlock accounts */
+const deployedFolder = deployInfo.deployedFolder;
+const fn = deployInfo.fn;
+
+/* create the 'deployed' folder */
+if (!fs.existsSync(deployedFolder)) {
+	fs.mkdirSync(deployedFolder);
+}
+
+if (fs.existsSync(fn)) {
+	fs.unlinkSync(fn);
+}
+
+deloyLotteryContract();
+
+
+function deloyLotteryContract() {
+	console.log('Start deploying the lottery contract...');
+	const accounts = web3.eth.accounts;
 	for (let acc of accounts) {
 		web3.personal.unlockAccount(acc, 'highsharp', 36000);
 	}
-	console.log("Initialing a new contract...")
-	lotteryContract = web3.eth.contract([{ "constant": false, "inputs": [{ "name": "amount", "type": "uint256" }], "name": "withdraw", "outputs": [{ "name": "success", "type": "bool" }], "payable": false, "stateMutability": "nonpayable", "type": "function" }, { "constant": true, "inputs": [{ "name": "lottery", "type": "bytes" }], "name": "splitLottery", "outputs": [{ "name": "ver", "type": "bytes1" }, { "name": "rs2", "type": "bytes" }, { "name": "hashRs1", "type": "bytes32" }, { "name": "addr", "type": "address" }, { "name": "time", "type": "uint64" }], "payable": false, "stateMutability": "pure", "type": "function" }, { "constant": false, "inputs": [{ "name": "addr", "type": "address" }], "name": "unLock", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" }, { "constant": true, "inputs": [{ "name": "account", "type": "address" }], "name": "getEscrow", "outputs": [{ "name": "deposite", "type": "uint256" }], "payable": false, "stateMutability": "view", "type": "function" }, { "constant": true, "inputs": [{ "name": "ver", "type": "uint8" }, { "name": "hashRs1Rs2", "type": "bytes32" }, { "name": "rs2", "type": "bytes" }], "name": "verifyLottery", "outputs": [{ "name": "", "type": "bool" }], "payable": false, "stateMutability": "view", "type": "function" }, { "constant": false, "inputs": [{ "name": "lottery", "type": "bytes" }, { "name": "signature", "type": "bytes" }, { "name": "winningData", "type": "bytes" }], "name": "verify", "outputs": [{ "name": "success", "type": "bool" }], "payable": false, "stateMutability": "nonpayable", "type": "function" }, { "constant": false, "inputs": [], "name": "increase", "outputs": [], "payable": true, "stateMutability": "payable", "type": "function" }, { "constant": false, "inputs": [{ "name": "addr", "type": "address" }], "name": "lock", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" }, { "constant": false, "inputs": [{ "name": "addr", "type": "address" }], "name": "withdrawAll", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "payable": false, "stateMutability": "nonpayable", "type": "constructor" }, { "anonymous": false, "inputs": [{ "indexed": false, "name": "lottery", "type": "bytes" }, { "indexed": false, "name": "sig", "type": "bytes" }, { "indexed": false, "name": "winningData", "type": "bytes" }, { "indexed": false, "name": "sender", "type": "address" }], "name": "VerifyLottery", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": false, "name": "lottery", "type": "bytes" }, { "indexed": false, "name": "issuingTime", "type": "uint64" }, { "indexed": false, "name": "faceValue", "type": "uint256" }, { "indexed": false, "name": "issuer", "type": "address" }, { "indexed": false, "name": "winner", "type": "address" }], "name": "RedeemedLotttery", "type": "event" }]);
+	console.log("Initialing a new contract...");
+	let lotteryAbi = [{ "constant": false, "inputs": [{ "name": "amount", "type": "uint256" }], "name": "withdraw", "outputs": [{ "name": "success", "type": "bool" }], "payable": false, "stateMutability": "nonpayable", "type": "function" }, { "constant": true, "inputs": [{ "name": "lottery", "type": "bytes" }], "name": "splitLottery", "outputs": [{ "name": "ver", "type": "bytes1" }, { "name": "rs2", "type": "bytes" }, { "name": "hashRs1", "type": "bytes32" }, { "name": "addr", "type": "address" }, { "name": "time", "type": "uint64" }], "payable": false, "stateMutability": "pure", "type": "function" }, { "constant": false, "inputs": [{ "name": "addr", "type": "address" }], "name": "unLock", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" }, { "constant": true, "inputs": [{ "name": "account", "type": "address" }], "name": "getEscrow", "outputs": [{ "name": "deposite", "type": "uint256" }], "payable": false, "stateMutability": "view", "type": "function" }, { "constant": true, "inputs": [{ "name": "ver", "type": "uint8" }, { "name": "hashRs1Rs2", "type": "bytes32" }, { "name": "rs2", "type": "bytes" }], "name": "verifyLottery", "outputs": [{ "name": "", "type": "bool" }], "payable": false, "stateMutability": "view", "type": "function" }, { "constant": false, "inputs": [{ "name": "lottery", "type": "bytes" }, { "name": "signature", "type": "bytes" }, { "name": "winningData", "type": "bytes" }], "name": "verify", "outputs": [{ "name": "success", "type": "bool" }], "payable": false, "stateMutability": "nonpayable", "type": "function" }, { "constant": false, "inputs": [], "name": "increase", "outputs": [], "payable": true, "stateMutability": "payable", "type": "function" }, { "constant": false, "inputs": [{ "name": "addr", "type": "address" }], "name": "lock", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" }, { "constant": false, "inputs": [{ "name": "addr", "type": "address" }], "name": "withdrawAll", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "payable": false, "stateMutability": "nonpayable", "type": "constructor" }, { "anonymous": false, "inputs": [{ "indexed": false, "name": "lottery", "type": "bytes" }, { "indexed": false, "name": "sig", "type": "bytes" }, { "indexed": false, "name": "winningData", "type": "bytes" }, { "indexed": false, "name": "sender", "type": "address" }], "name": "VerifyLottery", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": false, "name": "lottery", "type": "bytes" }, { "indexed": false, "name": "issuingTime", "type": "uint64" }, { "indexed": false, "name": "faceValue", "type": "uint256" }, { "indexed": false, "name": "issuer", "type": "address" }, { "indexed": false, "name": "winner", "type": "address" }], "name": "RedeemedLotttery", "type": "event" }];
+	lotteryContract = web3.eth.contract(lotteryAbi);
 	lottery = lotteryContract.new(
 		{
 			from: web3.eth.accounts[0],
@@ -24,35 +36,15 @@ function init() {
 			console.log("Creating the contract callback.");
 			if (typeof contract.address !== 'undefined') {
 				console.log('Contract mined! address: ' + contract.address + ' transactionHash: ' + contract.transactionHash);
-				console.log(lottery.getEscrow(accounts[0]).toNumber());
-				process.env.lottery = lottery;
-				isInit = true;
+				fs.appendFile(fn, JSON.stringify({abi: lotteryAbi, addr: contract.address}), err => {
+					if (err) throw err;
+					console.log("Written addr to the delpoyed file.")
+				})
 
 			}
 
 		});
 
-	
-
 
 }
 
-init();
-// async function waitForLotteryMined() {
-// 	console.log("start waiting for mining lottery...");
-// 	await txnUtils.retryPromise(
-// 		() => {
-// 			return isInit;
-// 		},
-// 		30
-// 	);
-// };
-
-
-// waitForLotteryMined();
-
-
-
-
-module.exports.lotteryAbi = lotteryContract;
-module.exports.lottery = lottery;
