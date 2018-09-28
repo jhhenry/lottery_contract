@@ -1,5 +1,5 @@
 const test = require('ava');
-import txnUtils from './txnUtils.js'
+const txnUtils = require('./txnUtils');
 const web3 = require('./web3Utils');
 const deployInfo = require('./deployInfo');
 var accounts = web3.eth.accounts
