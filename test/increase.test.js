@@ -3,9 +3,7 @@ const txnUtils = require('./txnUtils');
 const web3 = require('./web3Utils');
 const deployInfo = require('./deployInfo');
 var accounts = web3.eth.accounts
-var lottery_issuer = accounts[0];
-//var lottery_redeemer = accounts[1];
-console.log("start executing increase tests ....");
+var lottery_issuer = accounts[2];
 test.before("initialize a existing lottery contract", t => {
 	let lottery = deployInfo.getLottery(web3, t);
 	t.context.lottery = lottery;

@@ -2,6 +2,7 @@ const fs = require('fs')
 const web3 = require('./web3Utils');
 const txnUtils = require('./txnUtils');
 const deployInfo = require('./deployInfo');
+const solc = require('solc');
 
 const deployedFolder = deployInfo.deployedFolder;
 const fn = deployInfo.fn;
@@ -41,8 +42,9 @@ function deloyLotteryContract() {
 					if (err) throw err;
 					console.log("Written addr to the delpoyed file.")
 				})
-
-				increaseEscrow();
+				var accounts = web3.eth.accounts
+				increaseEscrow(accounts[0]);
+				increaseEscrow(accounts[2]);
 
 			}
 
@@ -51,18 +53,16 @@ function deloyLotteryContract() {
 		});
 }
 
-async function increaseEscrow()
+async function increaseEscrow(acc)
 {
-	var accounts = web3.eth.accounts
-	var lottery_issuer = accounts[0];
-	const initE = lottery.getEscrow(lottery_issuer);
-	const txn = lottery.increase({from: lottery_issuer, value: web3.toWei('10', 'ether')});
+	const initE = lottery.getEscrow(acc);
+	const txn = lottery.increase({from: acc, value: web3.toWei('10', 'ether')});
 	const r =  await txnUtils.getReceiptPromise(web3, txn, 60);
 	console.log(`txn: ${txn}, r: ${r}`);
 
 	const gap =  await txnUtils.retryPromise(
 		() => {
-			let e2 = lottery.getEscrow(lottery_issuer);
+			let e2 = lottery.getEscrow(acc);
 			console.log(`e2: ${e2}`);
 			return web3.fromWei(e2.minus(initE), "ether").toNumber() === 10;
 		},
@@ -70,5 +70,10 @@ async function increaseEscrow()
 	if (!gap) {
 		console.error("Failed to increase escrow for account 1 during deploy.");
 	}
+}
+
+function compileContractFile()
+{
+
 }
 
