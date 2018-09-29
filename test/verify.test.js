@@ -5,6 +5,7 @@ const deployInfo = require('./deployInfo');
 
 var accounts = web3.eth.accounts
 var lottery_issuer = accounts[0];
+let lottery_winner = accounts[1];
 test.before("initialize a existing lottery contract", async t => {
 	let lottery = deployInfo.getLottery(web3, t);
 	t.context.lottery = lottery;
@@ -29,4 +30,6 @@ test("verify test", async t => {
 			return web3.fromWei(afterVerify, "ether").toNumber() < 10;
 		},
 		15);
+	let winner_balance = lottery.getEscrow(lottery_winner);
+	t.is(web3.fromWei(winner_balance, "finney").toNumber(), 10, "Winner did not get rewarded.");
 })
