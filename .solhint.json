@@ -1,0 +1,10 @@
+{
+	"extend": "default",
+	"rules": {
+	    "no-inline-assembly": false,
+	    "indent": false,
+	    "func-order": false,
+	    "bracket-align": false,
+	    "no-mix-tabs-and-spaces": false
+	}
+}

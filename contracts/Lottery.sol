@@ -1,9 +1,15 @@
-pragma solidity ^0.4.24;
+pragma solidity 0.4.24;
 
-contract Lottery
-{
-    event VerifyLottery(bytes lottery, bytes sig, bytes winningData, address sender);
+import "./FileToken.sol";
+
+
+contract Lottery {
+    uint256 constant private MAX_UINT256 = 2**256 - 1;
+    uint16 constant private MIN_FINE = 1000;
+
+    event RedeemingLottery(bytes lottery, bytes sig, bytes winningData, address sender);
     event RedeemedLotttery(bytes lottery, uint64 issuingTime, uint256 faceValue, address issuer, address winner);
+
     struct Escrow {
         uint deposite;
         bool unLocked; // when locked the owner cannot withdraw his/her deposite.
@@ -15,14 +21,16 @@ contract Lottery
         bytes32 h2;// hash of random string1 + random string2
     }
 
-    address creator;
-    mapping(address => Escrow) accounts;
-    mapping(address => Stub[10]) stubsMapping; // lottery issuer to lottery stub
-    mapping(address => uint8) stubsIndex; // each index store where the stub is stored
+    FileToken public fileToken;
+    //address private adminAddr;
+    address private creator;
+    mapping(address => Escrow) private accounts;
+    mapping(address => Stub[10]) private stubsMapping; // lottery issuer to lottery stub
+    mapping(address => uint8) private stubsIndex; // each index store where the stub is stored
     
-    uint8 power = 18;
-    uint256 faceValue = 10 finney; // unit is wei
-    uint256 minimalEscrow = 100 finney;
+    uint8 private power  = 18;
+    uint256 private faceValue = 10 finney; // unit is finney
+    uint256 private minimalEscrow = 100 finney;
 
     modifier admin {
         require(msg.sender == creator, "Only administrator, aka the contract creator, can call this method");
@@ -31,27 +39,22 @@ contract Lottery
 
     constructor() public {
         creator = msg.sender;
+        fileToken = new FileToken(2**256 - 1, "FileToken", 0, "Ft", address(this), creator);
     }
 
-    /// Get escrow by account address
-    function getEscrow(address account) public view returns (uint256 deposite)
-    {
-        Escrow storage esc = accounts[account];
-        deposite = esc.deposite;
+   /* transfer tokens from this contract to the user account */
+    function increase(address to, uint256 amount) public returns (bool success) {
+        require(msg.sender == creator, "Only admin can call this method");
+        fileToken.transfer(to, amount);
+        success = true;
     }
 
-    /// Increase the deposite of the escrow account
-    function increase() public payable {
-        Escrow storage esc = accounts[msg.sender];
-        esc.deposite += msg.value;
-        //from experiment it looks the function always returns nothing
-        //even if "returns balance" is used. balance = esc.deposite;
-    }
-
-    function verify(bytes lottery, bytes signature, bytes winningData) public returns (bool success){
-        emit VerifyLottery(lottery, signature, winningData, msg.sender);
+    /* redeem lottery */
+    function redeemLottery(bytes lottery, bytes signature, bytes winningData) public returns (bool success){
+        emit RedeemingLottery(lottery, signature, winningData, msg.sender);
+        require(fileToken.getPledge(msg.sender) > MIN_FINE, "The pledge of the msg.sender calling redeem should have pledge.");
         address issuer = verifySig(signature, lottery);
-        require (issuer != 0x00, "Signature verification failed");
+        require(issuer != 0x00, "Signature verification failed");
         (bytes1 ver, bytes memory rs2, bytes32 hashRs1, address dest, uint64 time) = splitLottery(lottery); 
         if (dest == 0x00) {
             dest = msg.sender;
@@ -64,7 +67,7 @@ contract Lottery
        
         require(verifyRs1Hash(winningData, hashRs1), "Hash of the random string 1 does not match.");
        
-        if (verifyLottery(uint8(ver), hashRs1Rs2, rs2)) {
+        if (verifyWinningLottery(uint8(ver), hashRs1Rs2, rs2)) {
             success = transfer(issuer, dest);
             if (success) {
                 storeStub(issuer, hashRs1, hashRs1Rs2);
@@ -75,51 +78,11 @@ contract Lottery
         }
     }
 
-    /// If the escrow is locked, withdraw will fail.
-    /// To unlock the account, it requires the admin account to call the "unlock" method.
-    /// The user cannot withdraw all escrowed money using this method; the minimal left
-    /// is 100 finey.
-    /// To withdraw all money, it requires the admin account to call the "withdrawAll" method.
-    function withdraw(uint amount) public returns (bool success) {
-        Escrow storage esc = accounts[msg.sender];
-        if (esc.unLocked) {
-            uint a = amount;
-            if (amount > esc.deposite - minimalEscrow) {
-                a = esc.deposite - minimalEscrow;
-            }
-            esc.deposite -= a;
-            msg.sender.transfer(a);
-            success = true;
-        }
-    }
-
-    function withdrawAll(address addr) public admin {
-        Escrow storage esc = accounts[addr];
-        if (esc.deposite > 0) {
-            addr.transfer(esc.deposite);
-        }
-    }
-
-    function unLock(address addr) public admin {
-        Escrow storage esc = accounts[addr];
-        esc.unLocked = true;
-    }
-
-    function lock(address addr) public admin {
-        Escrow storage esc = accounts[addr];
-        esc.unLocked = true;
+    function transfer(address source, address dest) private returns (bool success){
+        success = fileToken.transferFrom(source, dest, faceValue);
     }
     
-    function transfer(address source, address dest) private returns (bool ret){
-        Escrow storage esc = accounts[source];
-        if (esc.deposite >= faceValue) {
-            esc.deposite -= faceValue;
-            accounts[dest].deposite += faceValue;
-            ret = true;
-        }
-    }
-    
-    function verifySig(bytes memory signature, bytes memory lottery) internal pure returns (address addr) {
+    function verifySig(bytes memory signature, bytes memory lottery) public pure returns (address addr) {
         bytes32 prefixedHashed = prefixed(keccak256(lottery));
         addr = recoverSigner(prefixedHashed, signature);
     }
@@ -133,15 +96,16 @@ contract Lottery
     function getHash(bytes data) internal pure returns (bytes32 h) {
         h = keccak256(data);
     }
+
     /// Verify if a lottery wins and tranfer its face value to the winner
-    function verifyLottery(uint8 ver, bytes32 hashRs1Rs2, bytes rs2) public view returns (bool)
+    function verifyWinningLottery(uint8 ver, bytes32 hashRs1Rs2, bytes rs2) internal view returns (bool)
     {
         require(ver == 0, "Version must be 0");
         bytes32 hashRs2 = getHash(rs2);
 
         return verifyXOR(hashRs1Rs2, hashRs2, power);
     }
-    
+
     function checkStubs(bytes32 hashRs1, bytes32 hashRs1Rs2, address addr) internal view returns (bool found){
         Stub[10] storage stubs = stubsMapping[addr];
   
@@ -178,7 +142,7 @@ contract Lottery
             rs1Rs2[i] = rs1[i];
         }
         uint8 offset = uint8(rs1.length);
-        for ( i = 0; i < rs2.length; i++) {
+        for (i = 0; i < rs2.length; i++) {
             rs1Rs2[i + offset] = rs2[i];
         }
         hashRs1Rs2 = getHash(rs1Rs2);
@@ -202,8 +166,6 @@ contract Lottery
             ret = uint8(xor[maxByte] << (8 - mod)) == 0;
         }
     }
-
-   
 
     function recoverSigner(bytes32 message, bytes memory sig)
         internal
@@ -258,8 +220,42 @@ contract Lottery
            addr := mload(add(lottery, offset))
            offset := add(offset, 8)
            time := mload(add(lottery, offset))
-        }
-        
-        
+        }        
     }
+
+    /// If the escrow is locked, withdraw will fail.
+    /// To unlock the account, it requires the admin account to call the "unlock" method.
+    /// The user cannot withdraw all escrowed money using this method; the minimal left
+    /// is 100 finey.
+    /// To withdraw all money, it requires the admin account to call the "withdrawAll" method.
+    function withdraw(uint amount) public returns (bool success) {
+        Escrow storage esc = accounts[msg.sender];
+        if (esc.unLocked) {
+            uint a = amount;
+            if (amount > esc.deposite - minimalEscrow) {
+                a = esc.deposite - minimalEscrow;
+            }
+            esc.deposite -= a;
+            msg.sender.transfer(a);
+            success = true;
+        }
+    }
+
+    function withdrawAll(address addr) public admin {
+        Escrow storage esc = accounts[addr];
+        if (esc.deposite > 0) {
+            addr.transfer(esc.deposite);
+        }
+    }
+
+    function unLock(address addr) public admin {
+        Escrow storage esc = accounts[addr];
+        esc.unLocked = true;
+    }
+
+    function lock(address addr) public admin {
+        Escrow storage esc = accounts[addr];
+        esc.unLocked = true;
+    }
+    
 }
