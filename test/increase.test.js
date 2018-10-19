@@ -29,7 +29,7 @@ test('test increase and then getBalance', async t => {
     //log("fileToken", fileToken);
     const initE = fileToken.balanceOf.call(file_receiver);
     log("initE", initE);
-    t.is(initE.toNumber(), 0, `The initial balance of the file_receiver should be 0.`)
+    t.is(initE.toNumber(), 30000, `The initial balance of the file_receiver should be 0.`)
 	const txn = lottery.increase(file_receiver, transferAmount, {from: adminAddr});
 	const r =  await txnUtils.getReceiptPromise(web3, txn, 60);
 	log(`increase txn: ${txn}, receipt: ${r}`);
