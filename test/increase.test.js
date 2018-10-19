@@ -21,15 +21,31 @@ test.before("initialize a existing lottery contract", t => {
     t.context.fileToken = contracts.fileToken;
 });
 
-
-test('test increase and then getBalance', async t => {
+test.serial('test increase with non-admin account', async t => {
     const lottery = t.context.lottery;
     const fileToken = t.context.fileToken;
     const transferAmount = 30000;
     //log("fileToken", fileToken);
     const initE = fileToken.balanceOf.call(file_receiver);
     log("initE", initE);
-    t.is(initE.toNumber(), 30000, `The initial balance of the file_receiver should be 0.`)
+    t.is(initE.toNumber(), transferAmount, `The initial balance of the file_receiver should be 0.`)
+	const txn = lottery.increase(file_receiver, transferAmount, {from: file_receiver});
+	const r =  await txnUtils.getReceiptPromise(web3, txn, 60);
+	log(`increase txn: ${txn}, receipt: ${r}`);
+	t.truthy(r, `The receipt of ${txn} should not be null.`);
+	let e2 = fileToken.balanceOf(file_receiver);
+	console.log(`e2: ${e2}`);
+	t.is(e2.minus(initE).toNumber(), 0, "the escrow should not have been increased due to non-admin account.");
+});
+
+test.serial('test increase and then getBalance', async t => {
+    const lottery = t.context.lottery;
+    const fileToken = t.context.fileToken;
+    const transferAmount = 30000;
+    //log("fileToken", fileToken);
+    const initE = fileToken.balanceOf.call(file_receiver);
+    log("initE", initE);
+    t.is(initE.toNumber(), transferAmount, `The initial balance of the file_receiver should be 0.`)
 	const txn = lottery.increase(file_receiver, transferAmount, {from: adminAddr});
 	const r =  await txnUtils.getReceiptPromise(web3, txn, 60);
 	log(`increase txn: ${txn}, receipt: ${r}`);

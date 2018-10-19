@@ -12,7 +12,6 @@ contract Lottery {
 
     struct Escrow {
         uint deposite;
-        bool unLocked; // when locked the owner cannot withdraw his/her deposite.
     }
     
     struct Stub {
@@ -43,8 +42,8 @@ contract Lottery {
     }
 
    /* transfer tokens from this contract to the user account */
-    function increase(address to, uint256 amount) public returns (bool success) {
-        require(msg.sender == creator, "Only admin can call this method");
+    function increase(address to, uint256 amount) public admin returns (bool success) {
+        //require(msg.sender == creator, "Only admin can call this method");
         fileToken.transfer(to, amount);
         success = true;
     }
@@ -222,40 +221,4 @@ contract Lottery {
            time := mload(add(lottery, offset))
         }        
     }
-
-    /// If the escrow is locked, withdraw will fail.
-    /// To unlock the account, it requires the admin account to call the "unlock" method.
-    /// The user cannot withdraw all escrowed money using this method; the minimal left
-    /// is 100 finey.
-    /// To withdraw all money, it requires the admin account to call the "withdrawAll" method.
-    function withdraw(uint amount) public returns (bool success) {
-        Escrow storage esc = accounts[msg.sender];
-        if (esc.unLocked) {
-            uint a = amount;
-            if (amount > esc.deposite - minimalEscrow) {
-                a = esc.deposite - minimalEscrow;
-            }
-            esc.deposite -= a;
-            msg.sender.transfer(a);
-            success = true;
-        }
-    }
-
-    function withdrawAll(address addr) public admin {
-        Escrow storage esc = accounts[addr];
-        if (esc.deposite > 0) {
-            addr.transfer(esc.deposite);
-        }
-    }
-
-    function unLock(address addr) public admin {
-        Escrow storage esc = accounts[addr];
-        esc.unLocked = true;
-    }
-
-    function lock(address addr) public admin {
-        Escrow storage esc = accounts[addr];
-        esc.unLocked = true;
-    }
-    
 }
