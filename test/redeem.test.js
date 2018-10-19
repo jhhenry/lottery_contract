@@ -5,7 +5,8 @@ const deployInfo = require('./deployInfo');
 const testUtils = require('./testUtils');
 
 const log = testUtils.logBlue("Redeem.test");
-const log2 = testUtils.logCyan("Redeem.test");
+const log2 = testUtils.logCyan("Redeem.succefull_redeem.test");
+const transRunner = new txnUtils.TransactionRunner(web3, log);
 
 const accounts = web3.eth.accounts
 const adminAcc = accounts[0];
@@ -26,19 +27,20 @@ log(`signature:`, sig);
 
 
 test.before("Deloy a new lottery contract", async t => {
+
     log(`starting test: ${t.title}`);
     const contracts = await deployInfo.deployLotteryContractPromise("Redeem lottery tests", web3, adminAcc);
     t.truthy(contracts.lottery);
     t.truthy(contracts.fileToken);
 
     const amount = 30000;
-    let txn = lottery.increase(file_receiver, amount, { from: adminAcc });
-    await txnUtils.getReceiptPromise(web3, txn, 60);
-    //deployInfo.transferTokenFromLotteryTo(web3, contracts.lottery, adminAcc, file_receiver, amount);
+    let r = await transRunner.syncRun(lottery.increase, adminAcc, file_receiver, amount);
+    t.truthy(r.receipt, `The receipt of ${r.txn} should not be null.`);
     t.is(contracts.fileToken.balanceOf(file_receiver).toNumber(), amount);
-    txn = lottery.increase(file_sender, amount, { from: adminAcc });
-    await txnUtils.getReceiptPromise(web3, txn, 60);
+
+    r = await transRunner.syncRun(lottery.increase, adminAcc, file_sender, amount);
     t.is(contracts.fileToken.balanceOf(file_sender).toNumber(), amount);
+    
     t.context.lottery = contracts.lottery;
     t.context.fileToken = contracts.fileToken;
 });
@@ -47,23 +49,19 @@ test.serial("redeem without pledge test", async t => {
     const lottery = t.context.lottery;
     const fileToken = t.context.fileToken;
 
-    let redeem_txn = lottery.redeemLottery(lotteryData, sig, rs1, { from: file_sender, gas: 300000 });
-    log(`redeemLottery_txn:`, ` ${redeem_txn}`);
-    let r = await txnUtils.getReceiptPromise(web3, redeem_txn, 60);
-    log(`Has got the receipt of redeemLottery_txn:`, ` ${redeem_txn}`);
-    log(`The logs of ${redeem_txn}:`, ` ${r.logs ? r.logs.length : 0}`);
-    await txnUtils.retryPromise(
-        () => {
-            let afterRedeem = fileToken.balanceOf(lottery_issuer);
-            log(`afterRedeem: `, `${afterRedeem}`);
-            return afterRedeem.toNumber() == 30000;
-        },
-        15);
+    let redeem_txn = await transRunner.syncRun(lottery.redeemLottery, file_sender, lotteryData, sig, rs1);
+    t.truthy(redeem_txn.receipt, `The receipt of ${redeem_txn.txn} should not be null.`);
+    t.is(redeem_txn.receipt.logs.length, 0);
+
+    let afterRedeem = fileToken.balanceOf(lottery_issuer);
+    t.is(afterRedeem.toNumber(), 30000, 'The balance of the Lottery_issuer should not have been changed.');
+
     let winner_balance = fileToken.balanceOf(file_sender);
     t.is(winner_balance.toNumber(), 30000, "Winner did not get rewarded.");
 });
 
 test.serial("redeem with pledge test", async t => {
+    const transRunner = new txnUtils.TransactionRunner(web3, log2);
     const lottery = t.context.lottery;
     const fileToken = t.context.fileToken;
     /** Prerequisitions befor a file sender can redeem a winning lottery:
@@ -73,8 +71,8 @@ test.serial("redeem with pledge test", async t => {
      */
 
     // 1 turn in pledge
-    const turnInTxn = fileToken.turnInPledge(10000, { from: file_sender });
-    await txnUtils.getReceiptPromise(web3, turnInTxn, 60);
+    const turnInTxn = await transRunner.syncRun(fileToken.turnInPledge,  file_sender, 10000);
+    t.truthy(turnInTxn.receipt && turnInTxn.receipt.logs.length > 0);
     // confirm there is enough pledge
     const pledge = fileToken.getPledge(file_sender);
     t.is(pledge.toNumber(), 10000);
@@ -82,24 +80,17 @@ test.serial("redeem with pledge test", async t => {
 
     // 2 approve token transfer
     const approvalAmount = 1000;
-    const approveTxn = fileToken.approve(lottery.address, approvalAmount, { from: file_receiver });
-    await txnUtils.getReceiptPromise(web3, approveTxn, 60);
+    const approveTxn = await transRunner.syncRun(fileToken.approve, file_receiver, lottery.address, approvalAmount);
+    t.truthy(approveTxn.receipt.logs.length > 0, 'approveTxn failed or worked unexpectedly.');
     // confirm the approve worked
     t.is(fileToken.allowance(file_receiver, lottery.address).toNumber(), approvalAmount);
 
-    let redeem_txn = lottery.redeemLottery(lotteryData, sig, rs1, { from: file_sender, gas: 3000000 });
-    log2(`redeem_txn:`, ` ${redeem_txn}`);
-    let r = await txnUtils.getReceiptPromise(web3, redeem_txn, 60);
-    log2(`Has got the receipt of redeem_txn:`, ` ${redeem_txn}`);
-    log2(`The logs of the redeem_txn:`, ` ${r.logs ? r.logs.length : 0}`);
-    t.is(r.logs.length, 3);
-    await txnUtils.retryPromise(
-        () => {
-            let afterRedeem = fileToken.balanceOf(lottery_issuer);
-            log2(`afterRedeem: `, `${afterRedeem}`);
-            return afterRedeem.toNumber() == 29000;
-        },
-        20);
+    // Finally, call the redeemLottery again.
+    let redeem_txn = await transRunner.setGas(300000).syncRun(lottery.redeemLottery, file_sender, lotteryData, sig, rs1);
+    t.truthy(redeem_txn.receipt.logs.length === 3, 'redeem_txn failed or worked unexpectedly.');
+
+    let afterRedeem = fileToken.balanceOf(lottery_issuer);
+    t.is(afterRedeem.toNumber(), 29000, 'The balance of the Lottery_issuer should be changed.');
     let winner_balance = fileToken.balanceOf(file_sender);
     t.is(winner_balance.toNumber(), 21000, "Winner did not get rewarded.");
 });

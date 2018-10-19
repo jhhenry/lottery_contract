@@ -5,10 +5,12 @@ const deployInfo = require('./deployInfo');
 const testUtils = require('./testUtils');
 
 const log = testUtils.logBlue("Increase.test");
+const transRunner = new txnUtils.TransactionRunner(web3, log);
 
 const accounts = web3.eth.accounts
 const adminAddr = accounts[0];
 const file_receiver = accounts[1];
+
 // const lottery_issuer = file_receiver;
 // const file_sender = accounts[2];
 
@@ -29,13 +31,11 @@ test.serial('test increase with non-admin account', async t => {
     const initE = fileToken.balanceOf.call(file_receiver);
     log("initE", initE);
     t.is(initE.toNumber(), transferAmount, `The initial balance of the file_receiver should be 0.`)
-	const txn = lottery.increase(file_receiver, transferAmount, {from: file_receiver});
-	const r =  await txnUtils.getReceiptPromise(web3, txn, 60);
-	log(`increase txn: ${txn}, receipt: ${r}`);
-	t.truthy(r, `The receipt of ${txn} should not be null.`);
+    const r = await transRunner.syncRun(lottery.increase, file_receiver, file_receiver, transferAmount);
+    t.truthy(r.receipt, `The receipt of ${r.txn} should not be null.`);
 	let e2 = fileToken.balanceOf(file_receiver);
-	console.log(`e2: ${e2}`);
-	t.is(e2.minus(initE).toNumber(), 0, "the escrow should not have been increased due to non-admin account.");
+	console.log(`the balance after increase by non-admin: ${e2}`);
+	t.is(e2.minus(initE).toNumber(), 0, "the balance should not have been increased due to non-admin account.");
 });
 
 test.serial('test increase and then getBalance', async t => {
@@ -46,17 +46,9 @@ test.serial('test increase and then getBalance', async t => {
     const initE = fileToken.balanceOf.call(file_receiver);
     log("initE", initE);
     t.is(initE.toNumber(), transferAmount, `The initial balance of the file_receiver should be 0.`)
-	const txn = lottery.increase(file_receiver, transferAmount, {from: adminAddr});
-	const r =  await txnUtils.getReceiptPromise(web3, txn, 60);
-	log(`increase txn: ${txn}, receipt: ${r}`);
-	t.truthy(r, `The receipt of ${txn} should not be null.`);
-
-	const gap =  await txnUtils.retryPromise(
-		() => {
-			let e2 = fileToken.balanceOf(file_receiver);
-			console.log(`e2: ${e2}`);
-			return e2.minus(initE).toNumber() === transferAmount;
-		},
-		15);
-	t.true(gap, "the escrow is not actually increased.");
+	const r = await transRunner.syncRun(lottery.increase, adminAddr, file_receiver, transferAmount);// lottery.increase(file_receiver, transferAmount, {from: adminAddr});
+	t.truthy(r.receipt, `The receipt of ${r.txn} should not be null.`);
+    let e2 = fileToken.balanceOf(file_receiver);
+    console.log(`the balance after increase by admin: ${e2}`);
+    t.is(e2.minus(initE).toNumber(), transferAmount, "the balance should have been increased ")
 });
