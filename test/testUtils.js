@@ -1,15 +1,27 @@
-function logBlue(title, ...args)
+function logBlue(fileName)
 {
-    console.log("\x1b[34m%s\x1b[0m", title, ...args);
+    return function(title, ...args) {
+        console.log(`<${fileName}> \x1b[34m%s\x1b[0m`, title, ...args);
+    }
 }
 
-function logCyan(title, ...args)
+function logCyan(fileName)
 {
-    console.log("\x1b[36m%s\x1b[0m", title, ...args);
+    return function(title, ...args) {
+        console.log(`<${fileName}> \x1b[36m%s\x1b[0m`, title, ...args);
+    }
+}
+
+function logMagenta(fileName)
+{
+    return function(title, ...args) {
+        console.log(`<${fileName}> \x1b[35m%s\x1b[0m`, title, ...args);
+    }
 }
 
 module.exports.logBlue = logBlue;
 module.exports.logCyan = logCyan;
+module.exports.logMagenta  = logMagenta ;
 
 /**
  

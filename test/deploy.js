@@ -5,7 +5,7 @@ const testUtils = require('./testUtils');
 const deployInfo = require('./deployInfo');
 const compile = require('./compile');
 
-const log = testUtils.logBlue;
+const log = testUtils.logBlue("deploy.js");
 
 const deployedFolder = deployInfo.deployedFolder;
 const fn = deployInfo.fn;
@@ -33,19 +33,23 @@ let lotteryAbi = compiled.lottery.abi;
 let lotteryBytecode = compiled.lottery.bytecode;
 let fileTokenAbi = compiled.fileToken.abi;
 
-deloyLotteryContract();
-
 /**
  * 1. Unlock all accounts.
- * 2. 
+ * 2. deploy a new lottery contract
  */
+unLockAllAccounts();
+deloyLotteryContract();
+
+function unLockAllAccounts() {
+    for (let acc of accounts) {
+        if (!web3.personal.unlockAccount(acc, 'highsharp', 36000)) {
+            console.error(`failed to unlock account: ${acc}`);
+        }
+    }
+}
+
 function deloyLotteryContract() {
     log('Start deploying the lottery contract...');
-
-    for (let acc of accounts) {
-        web3.personal.unlockAccount(acc, 'highsharp', 36000);
-    }
-    log("Initialing a new contract...");
 
     lotteryContract = web3.eth.contract(lotteryAbi);
     lottery = lotteryContract.new(
@@ -61,7 +65,7 @@ function deloyLotteryContract() {
                 log('Contract mined! address: ', contract.address + ' transactionHash: ' + contract.transactionHash);
                 let fileTokenAddr = lottery.fileToken.call();
                 log(`fileTokenAddr:`, fileTokenAddr);
-                fs.appendFile(fn, JSON.stringify({ lottery: { abi: lotteryAbi, addr: contract.address }, fileToken: { abi: fileTokenAbi, addr: fileTokenAddr } }), err => {
+                fs.appendFile(fn, JSON.stringify({ lottery: { abi: lotteryAbi, addr: contract.address, bytecode: lotteryBytecode }, fileToken: { abi: fileTokenAbi, addr: fileTokenAddr } }), err => {
                     if (err) throw err;
                     log("Written addr to the delpoyed file.")
                 });
@@ -81,7 +85,7 @@ async function transferTokenFromLotteryTo(lottery, adminAccount, account) {
     const gap = await txnUtils.retryPromise(
         () => {
             return confirmTokenTransferred(fileToken, account);
-        });
+        }, 15);
     if (!gap) {
         console.error(`Failed to increase increase for ${account} during deploy.`);
     }
@@ -92,23 +96,5 @@ function confirmTokenTransferred(fileToken, acc) {
     let balance = fileToken.balanceOf(acc).toNumber();
     log(`balance of ${acc}`, balance);
     return balance && balance === 30000;
-}
-
-async function increaseEscrow(acc) {
-    const initE = lottery.getEscrow(acc);
-    const txn = lottery.increase({ from: acc, value: web3.toWei('10', 'ether') });
-    const r = await txnUtils.getReceiptPromise(web3, txn, 60);
-    log(`txn: ${txn}, r: ${r}`);
-
-    const gap = await txnUtils.retryPromise(
-        () => {
-            let e2 = lottery.getEscrow(acc);
-            log(`e2: ${e2}`);
-            return web3.fromWei(e2.minus(initE), "ether").toNumber() === 10;
-        },
-        15);
-    if (!gap) {
-        console.error("Failed to increase escrow for account 1 during deploy.");
-    }
 }
 
