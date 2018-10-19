@@ -3,10 +3,21 @@ const fs = require('fs');
 
 function compileLotteryContract()
 {
-	let contractFile = fs.readFileSync("../contracts/Lottery.sol");
+    let contractFile = fs.readFileSync("../contracts/Lottery.sol");
+    let tokenInterfaceFile = fs.readFileSync("../contracts/EIP20Interface.sol");
+    let tokenFile = fs.readFileSync("../contracts/EIP20.sol");
+    let fileTokenFile = fs.readFileSync("../contracts/FileToken.sol");
+    let  input = {
+        "EIP20Interface.sol":tokenInterfaceFile.toString(),
+        "EIP20.sol": tokenFile.toString(),
+        "FileToken.sol": fileTokenFile.toString(),
+        "Lottery.sol": contractFile.toString()
+    };
 	//console.log(contractFile.toString().substring(0, 100));
-	const compiled = solc.compile(contractFile.toString());
-	fs.writeFileSync("../build/contracts/compiled.json", JSON.stringify(compiled));
+    const compiled = solc.compile({sources: input}, 1);
+    let jsonStr = JSON.stringify(compiled);
+   // console.log(`compiled object: ${jsonStr}`);
+	fs.writeFileSync("../build/contracts/compiled.json", jsonStr);
 
 	// let lotteryJson = fs.readFileSync("../build/contracts/Lottery.json");
 	// let jsonObj = JSON.parse(lotteryJson.toString());
@@ -14,13 +25,18 @@ function compileLotteryContract()
 	// const comparedBytecode = jsonObj.bytecode;
 	
 	//console.log("comparedAbi", comparedAbi);
-	//console.log("comparedBytecode", comparedBytecode);
-	const bytecode = "0x" + compiled.contracts[':Lottery'].bytecode;
-	const abi = JSON.parse(compiled.contracts[':Lottery'].interface);
-	//console.log(abi);
-	//console.log(bytecode);
+    //console.log("comparedBytecode", comparedBytecode);
+    let lotteryKey = "Lottery.sol:Lottery";
+	const bytecode = "0x" + compiled.contracts[lotteryKey].bytecode;
+	const abi = JSON.parse(compiled.contracts[lotteryKey].interface);
+	// console.log(abi);
+    // console.log(bytecode);
+    
+    let fileTokenKey = "FileToken.sol:FileToken";
+    const fileToken_bytecode = "0x" + compiled.contracts[fileTokenKey].bytecode;
+    const fileToken_abi = JSON.parse(compiled.contracts[fileTokenKey].interface);
 	
-	return {abi: abi, bytecode: bytecode};
+	return {lottery:{abi: abi, bytecode: bytecode}, fileToken:{abi: fileToken_abi, bytecode: fileToken_bytecode}};
 	
 	
 }

@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity ^0.4.24;
 
 import "./FileToken.sol";
 
@@ -29,7 +29,7 @@ contract Lottery {
     mapping(address => uint8) private stubsIndex; // each index store where the stub is stored
     
     uint8 private power  = 18;
-    uint256 private faceValue = 10 finney; // unit is finney
+    uint256 private faceValue = 1000; // unit is finney
     uint256 private minimalEscrow = 100 finney;
 
     modifier admin {
