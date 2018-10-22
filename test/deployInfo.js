@@ -10,7 +10,7 @@ let fileContent;
 let cached;
 function getContracts(web3, t) {
     if (cached) return cached;
-    const contractsInfo =getDeloyedFileContent();
+    const contractsInfo =getDeloyedFileContent(t);
 
     const lotteryInfo = contractsInfo.lottery;
 	console.log(`Got Lottery contract address ${lotteryInfo.addr}`);
@@ -24,7 +24,7 @@ function getContracts(web3, t) {
 	return cached;
 }
 
-function getDeloyedFileContent()
+function getDeloyedFileContent(t)
 {
     if (fileContent) {
         return fileContent;
@@ -61,11 +61,11 @@ function deployLotteryContractPromise(testName, web3, adminAddr)
                         reject(e);
                     } else {
                         if (typeof contract.address !== 'undefined') {
-                            log(`Delolyed Lottery contract for the test, "${testName}" at: `, contract.address + ' txn: ' + contract.transactionHash);
+                            log(`Delolyed Lottery contract for the test, "${testName}", at: ${contract.address}, txn: ${contract.transactionHash}`);
                             // log(`contract: ${contract}`);
                             // Object.keys(lottery).forEach(prop => log(`${prop}: ${lottery[prop]}`));
                             let fileTokenAddr = lottery.fileToken();
-                            log(`fileTokenAddr:`, fileTokenAddr);
+                            log(`"${testName}" fileTokenAddr:`, fileTokenAddr);
                             let fileTokenContract = web3.eth.contract(fileTokenInfo.abi);
                             let fileToken = fileTokenContract.at(fileTokenAddr);
                             resolve({ lottery: lottery, fileToken: fileToken});

@@ -6,7 +6,7 @@ const testUtils = require('./testUtils');
 
 const log = testUtils.logBlue("Redeem.test");
 const log2 = testUtils.logCyan("Redeem.succefull_redeem.test");
-const transRunner = new txnUtils.TransactionRunner(web3, log);
+const transRunner = new txnUtils.TransactionRunner(web3);
 
 const accounts = web3.eth.accounts
 const adminAcc = accounts[0];
@@ -35,10 +35,12 @@ test.before("Deloy a new lottery contract", async t => {
 
     const amount = 30000;
     let r = await transRunner.syncRun(lottery.increase, adminAcc, file_receiver, amount);
+    log(`executed increase txn: ${r.txn}`);
     t.truthy(r.receipt, `The receipt of ${r.txn} should not be null.`);
     t.is(contracts.fileToken.balanceOf(file_receiver).toNumber(), amount);
 
     r = await transRunner.syncRun(lottery.increase, adminAcc, file_sender, amount);
+    log(`executed increase txn: ${r.txn}`);
     t.is(contracts.fileToken.balanceOf(file_sender).toNumber(), amount);
     
     t.context.lottery = contracts.lottery;
@@ -50,6 +52,7 @@ test.serial("redeem without pledge test", async t => {
     const fileToken = t.context.fileToken;
 
     let redeem_txn = await transRunner.syncRun(lottery.redeemLottery, file_sender, lotteryData, sig, rs1);
+    log(`executed redeemLottery txn: ${redeem_txn.txn}`);
     t.truthy(redeem_txn.receipt, `The receipt of ${redeem_txn.txn} should not be null.`);
     t.is(redeem_txn.receipt.logs.length, 0);
 
@@ -61,7 +64,7 @@ test.serial("redeem without pledge test", async t => {
 });
 
 test.serial("redeem with pledge test", async t => {
-    const transRunner = new txnUtils.TransactionRunner(web3, log2);
+    const transRunner = new txnUtils.TransactionRunner(web3);
     const lottery = t.context.lottery;
     const fileToken = t.context.fileToken;
     /** Prerequisitions befor a file sender can redeem a winning lottery:
@@ -72,6 +75,7 @@ test.serial("redeem with pledge test", async t => {
 
     // 1 turn in pledge
     const turnInTxn = await transRunner.syncRun(fileToken.turnInPledge,  file_sender, 10000);
+    log2(`executed turnInPledge txn: ${turnInTxn.txn}`);
     t.truthy(turnInTxn.receipt && turnInTxn.receipt.logs.length > 0);
     // confirm there is enough pledge
     const pledge = fileToken.getPledge(file_sender);
@@ -81,12 +85,14 @@ test.serial("redeem with pledge test", async t => {
     // 2 approve token transfer
     const approvalAmount = 1000;
     const approveTxn = await transRunner.syncRun(fileToken.approve, file_receiver, lottery.address, approvalAmount);
+    log2(`executed approve txn: ${approveTxn.txn}`);
     t.truthy(approveTxn.receipt.logs.length > 0, 'approveTxn failed or worked unexpectedly.');
     // confirm the approve worked
     t.is(fileToken.allowance(file_receiver, lottery.address).toNumber(), approvalAmount);
 
     // Finally, call the redeemLottery again.
     let redeem_txn = await transRunner.setGas(300000).syncRun(lottery.redeemLottery, file_sender, lotteryData, sig, rs1);
+    log2(`executed redeemLottery txn: ${redeem_txn.txn}`);
     t.truthy(redeem_txn.receipt.logs.length === 3, 'redeem_txn failed or worked unexpectedly.');
 
     let afterRedeem = fileToken.balanceOf(lottery_issuer);

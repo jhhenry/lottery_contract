@@ -40,17 +40,14 @@ function getReceiptPromise(web3, tx, timeout = 15) {
 class TransactionRunner {
     constructor(web3, log) {
         this.web3 = web3;
-        this.log = log;
         this.gas = 200000;
     }
 
     async syncRun(contractFunc, from, ...funcArgs) {
-        const log = this.log;
         const web3 = this.web3;
         const txn = from ? contractFunc(...funcArgs, {from: from, gas: this.gas }) : contractFunc(...funcArgs);
         const r =  await getReceiptPromise(web3, txn, 30);
         // Object.keys(contractFunc.name).forEach(prop => log(`${prop} => ${contractFunc[prop]}`));
-        log(`executed txn:`,  txn);
         return {txn: txn, receipt: r};
     }
 

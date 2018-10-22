@@ -1,21 +1,21 @@
 function logBlue(fileName)
 {
     return function(title, ...args) {
-        console.log(`<${fileName}> \x1b[34m%s\x1b[0m`, title, ...args);
+        console.log(`\x1b[33m<${fileName}>\x1b[0m \x1b[34m%s\x1b[0m`, title, ...args);
     }
 }
 
 function logCyan(fileName)
 {
     return function(title, ...args) {
-        console.log(`<${fileName}> \x1b[36m%s\x1b[0m`, title, ...args);
+        console.log(`\x1b[33m<${fileName}>\x1b[0m \x1b[36m%s\x1b[0m`, title, ...args);
     }
 }
 
 function logMagenta(fileName)
 {
     return function(title, ...args) {
-        console.log(`<${fileName}> \x1b[35m%s\x1b[0m`, title, ...args);
+        console.log(`\x1b[33m<${fileName}>\x1b[0m \x1b[35m%s\x1b[0m`, title, ...args);
     }
 }
 
