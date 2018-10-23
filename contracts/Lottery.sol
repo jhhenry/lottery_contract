@@ -20,7 +20,7 @@ contract Lottery {
         bytes32 h2;// hash of random string1 + random string2
     }
 
-    FileToken public fileToken;
+    AbstractFileToken public fileToken;
     //address private adminAddr;
     address private creator;
     mapping(address => Escrow) private accounts;
@@ -28,8 +28,7 @@ contract Lottery {
     mapping(address => uint8) private stubsIndex; // each index store where the stub is stored
     
     uint8 private power  = 18;
-    uint256 private faceValue = 1000; // unit is finney
-    uint256 private minimalEscrow = 100 finney;
+    uint256 private faceValue = 1000;
 
     modifier admin {
         require(msg.sender == creator, "Only administrator, aka the contract creator, can call this method");
@@ -38,7 +37,7 @@ contract Lottery {
 
     constructor() public {
         creator = msg.sender;
-        fileToken = new FileToken(2**256 - 1, "FileToken", 0, "Ft", address(this), creator);
+        fileToken = new FileToken(MAX_UINT256, "FileToken", 0, "Ft", address(this), creator);
     }
 
    /* transfer tokens from this contract to the user account */

@@ -1,8 +1,8 @@
 pragma solidity ^0.4.24;
 
-import "./EIP20.sol";
+import "./AbstractFileToken.sol";
 
-contract FileToken is EIP20 {
+contract FileToken is AbstractFileToken {
     address private lotteryAddr;
     address public adminAddr;
     mapping(address => uint256) private pledgeAccounts;

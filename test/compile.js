@@ -6,10 +6,12 @@ function compileLotteryContract()
     let contractFile = fs.readFileSync("../contracts/Lottery.sol");
     let tokenInterfaceFile = fs.readFileSync("../contracts/EIP20Interface.sol");
     let tokenFile = fs.readFileSync("../contracts/EIP20.sol");
+    let abstractFileTokenFile = fs.readFileSync("../contracts/AbstractFileToken.sol");
     let fileTokenFile = fs.readFileSync("../contracts/FileToken.sol");
     let  input = {
         "EIP20Interface.sol":tokenInterfaceFile.toString(),
         "EIP20.sol": tokenFile.toString(),
+        "AbstractFileToken.sol": abstractFileTokenFile.toString(),
         "FileToken.sol": fileTokenFile.toString(),
         "Lottery.sol": contractFile.toString()
     };
@@ -17,15 +19,14 @@ function compileLotteryContract()
     const compiled = solc.compile({sources: input}, 1);
     let jsonStr = JSON.stringify(compiled);
    // console.log(`compiled object: ${jsonStr}`);
-	fs.writeFileSync("../build/contracts/compiled.json", jsonStr);
 
-	// let lotteryJson = fs.readFileSync("../build/contracts/Lottery.json");
-	// let jsonObj = JSON.parse(lotteryJson.toString());
-	// const comparedAbi = jsonObj.abi;
-	// const comparedBytecode = jsonObj.bytecode;
-	
-	//console.log("comparedAbi", comparedAbi);
-    //console.log("comparedBytecode", comparedBytecode);
+    const folder = "../build/contracts";
+    const compiledFile = folder + "compiled.json";
+    if (!fs.existsSync(folder)) {
+        fs.mkdir(folder);
+    }
+	fs.writeFileSync(compiledFile, jsonStr);
+
     let lotteryKey = "Lottery.sol:Lottery";
 	const bytecode = "0x" + compiled.contracts[lotteryKey].bytecode;
 	const abi = JSON.parse(compiled.contracts[lotteryKey].interface);
