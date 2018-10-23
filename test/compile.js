@@ -17,15 +17,13 @@ function compileLotteryContract()
     const compiled = solc.compile({sources: input}, 1);
     let jsonStr = JSON.stringify(compiled);
    // console.log(`compiled object: ${jsonStr}`);
-	fs.writeFileSync("../build/contracts/compiled.json", jsonStr);
+   const folder = "../build/contracts";
+   const compiledFile = folder + "compiled.json";
+   if (!fs.existsSync(folder)) {
+       fs.mkdir(folder);
+   }
+   fs.writeFileSync(compiledFile, jsonStr);
 
-	// let lotteryJson = fs.readFileSync("../build/contracts/Lottery.json");
-	// let jsonObj = JSON.parse(lotteryJson.toString());
-	// const comparedAbi = jsonObj.abi;
-	// const comparedBytecode = jsonObj.bytecode;
-	
-	//console.log("comparedAbi", comparedAbi);
-    //console.log("comparedBytecode", comparedBytecode);
     let lotteryKey = "Lottery.sol:Lottery";
 	const bytecode = "0x" + compiled.contracts[lotteryKey].bytecode;
 	const abi = JSON.parse(compiled.contracts[lotteryKey].interface);
