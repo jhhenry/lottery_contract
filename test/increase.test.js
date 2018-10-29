@@ -31,9 +31,14 @@ test.serial('test increase with non-admin account', async t => {
     t.is(initE.toNumber(), 0, `The initial balance of the file_receiver should be 0.`)
 
     const transferAmount = 30000;
-    const r = await transRunner.syncRun(lottery.increase, file_receiver, file_receiver, transferAmount);
-    log(`executed increase txn: ${r.txn}`);
-    t.truthy(r.receipt, `The receipt of ${r.txn} should not be null.`);
+    try {
+        const r = await transRunner.syncRun(lottery.increase, file_receiver, file_receiver, transferAmount);
+        log(`executed increase txn: ${r.txn}`);
+        t.truthy(r.receipt, `The receipt of ${r.txn} should not be null.`);
+    } catch(err) {
+        log('Got execption when calling increase transaction..');
+    }
+    
 	let e2 = fileToken.balanceOf(file_receiver);
 	log(`the balance after increase by non-admin: ${e2}`);
 	t.is(e2.minus(initE).toNumber(), 0, "the balance should not have been increased due to non-admin account.");
