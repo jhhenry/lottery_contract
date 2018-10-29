@@ -1,45 +1,54 @@
 const solc = require('solc');
 const fs = require('fs');
+const path = require('path');
 
-function compileLotteryContract()
+function compileLotteryContract(...interestedContracts /** Array of contract name with lower case */)
 {
-    let contractFile = fs.readFileSync("../contracts/Lottery.sol");
-    let tokenInterfaceFile = fs.readFileSync("../contracts/EIP20Interface.sol");
-    let tokenFile = fs.readFileSync("../contracts/EIP20.sol");
-    let abstractFileTokenFile = fs.readFileSync("../contracts/AbstractFileToken.sol");
-    let fileTokenFile = fs.readFileSync("../contracts/FileToken.sol");
-    let  input = {
-        "EIP20Interface.sol":tokenInterfaceFile.toString(),
-        "EIP20.sol": tokenFile.toString(),
-        "AbstractFileToken.sol": abstractFileTokenFile.toString(),
-        "FileToken.sol": fileTokenFile.toString(),
-        "Lottery.sol": contractFile.toString()
-    };
-	//console.log(contractFile.toString().substring(0, 100));
-    const compiled = solc.compile({sources: input}, 1);
-    let jsonStr = JSON.stringify(compiled);
-   // console.log(`compiled object: ${jsonStr}`);
+    const solFiles = ["../contracts/EIP20Interface.sol", "../contracts/EIP20.sol", "../contracts/AbstractFileToken.sol", "../contracts/FileToken.sol", "../contracts/Lottery.sol", "../contracts/Lottery0.sol"];
 
-    const folder = "../build/contracts";
-    const compiledFile = folder + "compiled.json";
-    if (!fs.existsSync(folder)) {
-        fs.mkdir(folder);
+    const compiled = compile(solFiles);
+    {
+        let jsonStr = JSON.stringify(compiled);
+        // console.log(`compiled object: ${jsonStr}`);
+         const folder = "../build/contracts/";
+         const compiledFile = folder + "compiled.json";
+         if (!fs.existsSync(folder)) {
+             fs.mkdir(folder);
+         }
+         fs.writeFileSync(compiledFile, jsonStr);
     }
-	fs.writeFileSync(compiledFile, jsonStr);
+    const applyInterestedContracts = interestedContracts.length > 0;
+    const ret = {};
+    solFiles.forEach(item => {
+        let baseName = path.basename(item);
+        let contractName = baseName.substr(0, baseName.length - 4);
+        if (applyInterestedContracts && interestedContracts.indexOf(contractName) === -1) return;
+        console.log(`Adding compiled contract ${contractName}`);
+        let key = baseName + ":" + contractName;
+        const contractItem = {abi: JSON.parse(compiled.contracts[key].interface), bytecode: "0x" + compiled.contracts[key].bytecode};
+        ret[contractName.toLowerCase()] = contractItem;
+    });
 
-    let lotteryKey = "Lottery.sol:Lottery";
-	const bytecode = "0x" + compiled.contracts[lotteryKey].bytecode;
-	const abi = JSON.parse(compiled.contracts[lotteryKey].interface);
-	// console.log(abi);
-    // console.log(bytecode);
-    
-    let fileTokenKey = "FileToken.sol:FileToken";
-    const fileToken_bytecode = "0x" + compiled.contracts[fileTokenKey].bytecode;
-    const fileToken_abi = JSON.parse(compiled.contracts[fileTokenKey].interface);
+    //console.log(`result of comple: ${JSON.stringify(ret)}`);
+
+    return ret;
 	
-	return {lottery:{abi: abi, bytecode: bytecode}, fileToken:{abi: fileToken_abi, bytecode: fileToken_bytecode}};
-	
-	
+}
+
+function compile(solFiles) {
+    const solMap = new Map();
+    solFiles.forEach(item => {
+        let baseName = path.basename(item);
+        solMap.set(baseName, path.parse(item));
+    });
+
+    let sources = {};
+    solFiles.forEach(item => {
+        let baseName = path.basename(item);
+        sources[baseName] = fs.readFileSync(path.normalize(item)).toString();
+    });
+    const compiled = solc.compile({sources: sources}, 1);
+    return compiled;
 }
 
 module.exports.compileLotteryContract = compileLotteryContract;

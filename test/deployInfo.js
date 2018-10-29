@@ -43,9 +43,9 @@ function getDeloyedFileContent(t)
 
 function deployLotteryContractPromise(testName, web3, adminAddr)
 {
-    const contractsInfo =getDeloyedFileContent();
-    const lotteryInfo = contractsInfo.lottery;
-    const fileTokenInfo = contractsInfo.fileToken;
+    const contractsInfo = getDeloyedFileContent();
+    const lotteryInfo = contractsInfo.lottery0;
+    const fileTokenInfo = contractsInfo.filetoken;
 
     return new Promise(
         function(resolve, reject) {

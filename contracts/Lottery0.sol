@@ -1,9 +1,9 @@
 pragma solidity ^0.4.24;
 
-import "./AbstractFileToken.sol";
+import "./FileToken.sol";
 
 
-contract Lottery {
+contract Lottery0 {
     uint256 constant private MAX_UINT256 = 2**256 - 1;
     uint16 constant private MIN_FINE = 1000;
 
@@ -20,15 +20,16 @@ contract Lottery {
         bytes32 h2;// hash of random string1 + random string2
     }
 
-    //AbstractFileToken public fileToken;
+    FileToken public fileToken;
     //address private adminAddr;
     address private creator;
     mapping(address => Escrow) private accounts;
     mapping(address => Stub[10]) private stubsMapping; // lottery issuer to lottery stub
     mapping(address => uint8) private stubsIndex; // each index store where the stub is stored
     
-    //uint8 private power  = 18;
-    //uint256 private faceValue = 1000;
+    uint8 private power  = 18;
+    uint256 private faceValue = 1000; // unit is finney
+    uint256 private minimalEscrow = 100 finney;
 
     modifier admin {
         require(msg.sender == creator, "Only administrator, aka the contract creator, can call this method");
@@ -37,38 +38,36 @@ contract Lottery {
 
     constructor() public {
         creator = msg.sender;
-        //fileToken = new FileToken(MAX_UINT256, "FileToken", 0, "Ft", address(this), creator);
+        fileToken = new FileToken(2**256 - 1, "FileToken", 0, "Ft", address(this), creator);
     }
 
-    /* transfer tokens from this contract to the user account */
-    // function increase(address to, uint256 amount) public admin returns (bool success) {
+   /* transfer tokens from this contract to the user account */
+    function increase(address to, uint256 amount) public admin returns (bool success) {
         //require(msg.sender == creator, "Only admin can call this method");
-        //fileToken.transfer(to, amount);
-        //success = true;
-    // }
+        fileToken.transfer(to, amount);
+        success = true;
+    }
 
     /* redeem lottery */
     function redeemLottery(bytes lottery, bytes signature, bytes winningData) public returns (bool success){
         emit RedeemingLottery(lottery, signature, winningData, msg.sender);
-        
+        require(fileToken.getPledge(msg.sender) > MIN_FINE, "The pledge of the msg.sender calling redeem should have pledge.");
         address issuer = verifySig(signature, lottery);
         require(issuer != 0x00, "Signature verification failed");
-        (bytes1 ver, bytes memory rs2, bytes32 hashRs1, address dest, uint64 time, address token_address, uint256 faceValue, uint8 power) = splitLottery1(lottery); 
+        (bytes1 ver, bytes memory rs2, bytes32 hashRs1, address dest, uint64 time) = splitLottery(lottery); 
         if (dest == 0x00) {
             dest = msg.sender;
         }
-        //AbstractFileToken fileToken = AbstractFileToken(token_address);
-        require(AbstractFileToken(token_address).getPledge(msg.sender) > MIN_FINE, "The pledge of the msg.sender calling redeem should have pledge.");
 
         // bytes32 hrs2 = getHash(rs2);
         bytes32 hashRs1Rs2 = constructHashRs1Rs2(winningData, rs2);
-        //prevent replay attack
-        require(! checkStubs(hashRs1, hashRs1Rs2, issuer), "The lottery has been redeemed.");
+        bool found = checkStubs(hashRs1, hashRs1Rs2, issuer); //prevent replay attack
+        require(!found, "The lottery has been redeemed.");
        
         require(verifyRs1Hash(winningData, hashRs1), "Hash of the random string 1 does not match.");
        
-        if (verifyWinningLottery(uint8(ver), hashRs1Rs2, rs2, power)) {
-            success = transfer(AbstractFileToken(token_address), issuer, dest, faceValue);
+        if (verifyWinningLottery(uint8(ver), hashRs1Rs2, rs2)) {
+            success = transfer(issuer, dest);
             if (success) {
                 storeStub(issuer, hashRs1, hashRs1Rs2);
                 emit RedeemedLotttery(lottery, time, faceValue, issuer, dest);
@@ -78,8 +77,7 @@ contract Lottery {
         }
     }
 
-    function transfer(AbstractFileToken fileToken, address source, address dest, uint256 faceValue) private returns (bool success){
-        
+    function transfer(address source, address dest) private returns (bool success){
         success = fileToken.transferFrom(source, dest, faceValue);
     }
     
@@ -99,7 +97,7 @@ contract Lottery {
     }
 
     /// Verify if a lottery wins and tranfer its face value to the winner
-    function verifyWinningLottery(uint8 ver, bytes32 hashRs1Rs2, bytes rs2, uint8 power) internal pure returns (bool)
+    function verifyWinningLottery(uint8 ver, bytes32 hashRs1Rs2, bytes rs2) internal view returns (bool)
     {
         require(ver == 0, "Version must be 0");
         bytes32 hashRs2 = getHash(rs2);
@@ -221,35 +219,6 @@ contract Lottery {
            addr := mload(add(lottery, offset))
            offset := add(offset, 8)
            time := mload(add(lottery, offset))
-        }        
-    }
-
-    function splitLottery1(bytes memory lottery) public pure 
-    returns (bytes1 ver, bytes rs2, bytes32 hashRs1, address addr, uint64 time, address token_addr, uint256 faceValue, uint8 power)
-    {
-        require(lottery.length == 145, "The bytes length of the lottery of version 1 must be 195");
-        ver = lottery[0];
-        require(ver == 1, "Only version 1 is supported.");
-       
-        uint8 len1 = uint8(lottery[1]); // len of rs2
-        rs2 = new bytes(len1);
-        for (uint8 i = 0; i < len1; i++) {
-            rs2[i] = lottery[i + 2];
-        }
-
-        uint8 offset = len1 + 2;
-        assembly {
-           hashRs1 := mload(add(lottery, add(32, offset)))
-           offset := add(offset, 52)
-           addr := mload(add(lottery, offset))
-           offset := add(offset, 8)
-           time := mload(add(lottery, offset))
-           offset := add(offset, 20)
-           token_addr := mload(add(lottery, offset))
-           offset := add(offset, 32)
-           faceValue := mload(add(lottery, offset))
-           offset := add(offset, 1)
-           power := mload(add(lottery, offset))
         }        
     }
 }

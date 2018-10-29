@@ -28,9 +28,7 @@ if (fs.existsSync(fn)) {
 
 /* compile the latest Lottery contract. */
 let compiled = compile.compileLotteryContract();
-let lotteryAbi = compiled.lottery.abi;
-let lotteryBytecode = compiled.lottery.bytecode;
-let fileTokenAbi = compiled.fileToken.abi;
+
 
 /**
  * 1. Unlock all accounts.
@@ -50,7 +48,7 @@ function unLockAllAccounts() {
 
 function writeContractsInfoFile()
 {
-    fs.appendFile(fn, JSON.stringify({ lottery: { abi: lotteryAbi, bytecode: lotteryBytecode }, fileToken: { abi: fileTokenAbi } }), err => {
+    fs.appendFile(fn, JSON.stringify(compiled), err => {
         if (err) throw err;
         log("Written compiled contracts info to the delpoyed file.")
     });
