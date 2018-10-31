@@ -1,56 +1,8 @@
 #!/usr/bin/env node
 const fs = require('fs');
-const path = require('path');
 const Web3 = require('web3')
 const web3 = new Web3();
-const meow = require('meow');
 
-const cli = meow(`Accept one or more json file in the  "files" arg
-    Usage
-		  lottery_generator [<file|directory|glob> ...]`, {
-    flags: {
-        extensions: {
-            type: 'string',
-            alias: 'e',
-            default: ".json"
-        }
-    }
-});
-
-let filePaths = [];
-const extensions = cli.flags.extensions ? cli.flags.extensions.split(','): [".json"]
-const cwd = process.cwd();
-if (cli.input.length > 0) {
-    cli.input.forEach(item => {
-        if (!path.isAbsolute(item)) {
-            item = path.join(cwd, item);
-        }
-        let lstat = fs.lstatSync(item);
-        if (lstat.isDirectory()) {
-            // add or files with the specfied extensions under that directory
-            const files = fs.readdirSync(item);
-            files.forEach(file => {
-                console.log(`Found ${file} under directory ${item}`);
-                const fullPath = path.join(item, file);
-                if (fs.lstatSync(fullPath).isFile()) {
-                    const ext = path.extname(file);
-                    if (extensions.indexOf(ext) >= 0 ) {
-                        console.log(`Adding file: ${fullPath}.`);
-                        filePaths.push(fullPath);
-                    }
-                }
-            });
-
-        } else if (lstat.isFile()) {
-            console.log(`Adding file: ${item}.`);
-            filePaths.push(item);
-        }
-    });
-}
-
-
-generate(0, filePaths);
-generate(1, filePaths, {winner_address: "0x7c8c7a481a3dac2431745ce9b18b3bb8b6c526e7", token_addr: "0x1000000000000000000000000000000000000011", faceValue: 1000, probability: 10});
 
 function generate(version, filePaths, options = {winner_address: "0x7c8c7a481a3dac2431745ce9b18b3bb8b6c526e7" }) {
     // read file
@@ -87,3 +39,6 @@ function intToHex(i, bytes = 1) {
     if (len > expectedLen) throw new Error(`Insufficient space to cover the original integer value. len: ${len}, expectedLen: ${expectedLen}, i: ${i}`);
     return "0".repeat(expectedLen - len) + rawHex.substring(2);
 }
+
+module.exports.generate = generate;
+module.exports.assembleLottery = assembleLottery;
