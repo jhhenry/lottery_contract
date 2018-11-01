@@ -41,6 +41,44 @@ function getDeloyedFileContent(t)
     }
 }
 
+function deploy(web3, adminAddr, contracts /** Array<Object{name, c_args[]}> */, options /** {testName} */)
+{
+    const contractsInfo = getDeloyedFileContent();
+    const contractsToBeDeloyed = new Map();
+    contracts.forEach(item => {
+        const value = contractsInfo[item.name];
+        value.c_args = item.c_args;
+        contractsToBeDeloyed.set(item.name, value);
+    });
+    const promises = [];
+    contractsToBeDeloyed.forEach((v, k) => 
+        {
+            promises.push(new Promise(
+                function(resolve, reject) {
+                    let contractAbi = web3.eth.contract(v.abi);
+                    const cb = function(e, contract) {
+                        if (e) {
+                            reject(e);
+                        } else {
+                            if (typeof contract.address !== 'undefined') {
+                                log(`Delolyed ${k} contract for the test, "${options.testName}", at: ${newContract.address}, txn: ${newContract.transactionHash}`);
+                                const obj = {};
+                                obj[k] = newContract;
+                                resolve(obj);
+                            }
+                        }
+                    };
+                    const send_options = {from: adminAddr, data: v.bytecode, gas: '4700000'}
+                    log(`deploying contract ${k}`)
+                    let newContract = v.c_args && v.c_args.length > 0 ? contractAbi.new(...v.c_args, send_options, cb) : contractAbi.new(send_options, cb);
+                }
+            ))
+        }
+    );
+    return Promise.all(promises);
+
+}
+
 function deployLotteryContractPromise(testName, web3, adminAddr)
 {
     const contractsInfo = getDeloyedFileContent();
@@ -49,8 +87,8 @@ function deployLotteryContractPromise(testName, web3, adminAddr)
 
     return new Promise(
         function(resolve, reject) {
-            lotteryContract = web3.eth.contract(lotteryInfo.abi);
-            lottery = lotteryContract.new(
+            let lotteryContract = web3.eth.contract(lotteryInfo.abi);
+            let lottery = lotteryContract.new(
                 {
                     from: adminAddr,
                     data: lotteryInfo.bytecode,
@@ -76,27 +114,9 @@ function deployLotteryContractPromise(testName, web3, adminAddr)
         }
     );
 }
-// async function transferTokenFromLotteryTo(web3, lottery, adminAccount, account, amount = 30000) {
-//     log("calling  transferTokenFromLotteryTo")
-//     const txn = lottery.increase(account, amount, { from: adminAccount });
-//     const r = await txnUtils.getReceiptPromise(web3, txn, 60);
-//     log(`txn: ${txn}, r.logs: ${r.logs}`);
-//     const gap = await txnUtils.retryPromise(
-//         () => {
-//             return confirmTokenTransferred(fileToken, account);
-//         }, 15);
-//     if (!gap) {
-//         console.error(`Failed to increase increase for ${account} during deploy.`);
-//     }
-// }
-
-// function confirmTokenTransferred(fileToken, acc) {
-//     let balance = fileToken.balanceOf(acc).toNumber();
-//     log(`balance of ${acc}`, balance);
-//     return balance && balance === 30000;
-// }
 
 module.exports.getContracts = getContracts;
 module.exports.deployLotteryContractPromise = deployLotteryContractPromise
+module.exports.deploy = deploy;
 module.exports.deployedFolder = deployedFolder;
 module.exports.fn = fn;

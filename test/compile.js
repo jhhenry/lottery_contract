@@ -4,7 +4,7 @@ const path = require('path');
 
 function compileLotteryContract(...interestedContracts /** Array of contract name with lower case */)
 {
-    const solFiles = ["../contracts/EIP20Interface.sol", "../contracts/EIP20.sol", "../contracts/AbstractFileToken.sol", "../contracts/FileToken.sol", "../contracts/Lottery.sol", "../contracts/Lottery0.sol"];
+    const solFiles = ["../contracts/EIP20Interface.sol", "../contracts/EIP20.sol", "../contracts/AbstractFileToken.sol", "../contracts/FileToken.sol", "../contracts/SimpleFileToken.sol", "../contracts/Lottery.sol", "../contracts/Lottery0.sol"];
 
     const compiled = compile(solFiles);
     {

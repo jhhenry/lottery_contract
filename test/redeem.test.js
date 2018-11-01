@@ -32,19 +32,21 @@ test.before("Deloy a new lottery contract", async t => {
     const contracts = await deployInfo.deployLotteryContractPromise("Redeem lottery tests", web3, adminAcc);
     t.truthy(contracts.lottery);
     t.truthy(contracts.fileToken);
+    const lottery = contracts.lottery;
+    const fileToken = contracts.fileToken;
 
     const amount = 30000;
     let r = await transRunner.syncRun(lottery.increase, adminAcc, file_receiver, amount);
     log(`executed increase txn: ${r.txn}`);
     t.truthy(r.receipt, `The receipt of ${r.txn} should not be null.`);
-    t.is(contracts.fileToken.balanceOf(file_receiver).toNumber(), amount);
+    t.is(fileToken.balanceOf(file_receiver).toNumber(), amount);
 
     r = await transRunner.syncRun(lottery.increase, adminAcc, file_sender, amount);
     log(`executed increase txn: ${r.txn}`);
-    t.is(contracts.fileToken.balanceOf(file_sender).toNumber(), amount);
+    t.is(fileToken.balanceOf(file_sender).toNumber(), amount);
     
-    t.context.lottery = contracts.lottery;
-    t.context.fileToken = contracts.fileToken;
+    t.context.lottery = lottery;
+    t.context.fileToken = fileToken;
 });
 
 test.serial("redeem without pledge test", async t => {
