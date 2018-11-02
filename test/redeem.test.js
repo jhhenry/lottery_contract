@@ -32,9 +32,8 @@ test.before("Deloy a new lottery contract", async t => {
     const contracts = await deployInfo.deployLotteryContractPromise("Redeem lottery tests", web3, adminAcc);
     t.truthy(contracts.lottery);
     t.truthy(contracts.fileToken);
-    const lottery = contracts.lottery;
-    const fileToken = contracts.fileToken;
-
+    const {lottery, fileToken} = contracts;
+    
     const amount = 30000;
     let r = await transRunner.syncRun(lottery.increase, adminAcc, file_receiver, amount);
     log(`executed increase txn: ${r.txn}`);

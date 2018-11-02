@@ -22,10 +22,9 @@ test.before(
     "deploy lottery and fileToken contract respectively", 
     async t => {
         const contracts = await deployInfo.deploy(web3, adminAcc, contracts_names, {testName: "Deploy contracts test"});
-
         t.is(contracts.length, 2);
-        const lottery = contracts[0][contracts_names[0].name];
-        const ft = contracts[1][contracts_names[1].name];
+        
+        const [{lottery}, {simplefiletoken: ft}] = contracts; 
         t.truthy(lottery);
         t.truthy(ft);
 
