@@ -52,3 +52,17 @@ BgCyan = "\x1b[46m"
 BgWhite = "\x1b[47m"
 
  */
+
+ module.exports.confirmContractsDeployed = async function(contractsNames, deloyUtil, web3, creatorAccount, t, {testName = "some test"} = {})
+ {
+    const contracts = await deloyUtil.deploy(web3, creatorAccount, contractsNames, {testName: testName});
+    t.is(contracts.length, contractsNames.length);
+
+    contracts.forEach((item, index) => {
+        const name = contractsNames[index].name;
+        const c = item[name];
+        t.truthy(c);
+        t.context[name] = c;
+    })
+    return t;
+ }

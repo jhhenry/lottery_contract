@@ -12,24 +12,17 @@ const adminAcc = accounts[0];
 log("admin account:", adminAcc);
 
 const _initialAmount = new BigNumber('f'.repeat(64), 16);
+const names = ['lottery', 'simplefiletoken']
 const contracts_names = [
-    {name:'lottery'}, 
-    {name: 'simplefiletoken', c_args:['0x' + 'f'.repeat(64), "FileToken", 0, "Ft"]}
+    {name: names[0]}, 
+    {name: names[1], c_args:['0x' + 'f'.repeat(64), "FileToken", 0, "Ft"]}
 ];
 
 
 test.before(
     "deploy lottery and fileToken contract respectively", 
     async t => {
-        const contracts = await deployInfo.deploy(web3, adminAcc, contracts_names, {testName: "Deploy contracts test"});
-        t.is(contracts.length, 2);
-        
-        const [{lottery}, {simplefiletoken: ft}] = contracts; 
-        t.truthy(lottery);
-        t.truthy(ft);
-
-        t.context.lottery = lottery;
-        t.context.ft = ft;
+        await testUtils.confirmContractsDeployed(contracts_names, deployInfo, web3, adminAcc, t, {testName: "Deploy contracts test"});
     }
 );
 
@@ -39,7 +32,7 @@ test("test deployed lottery contract", async t => {
 })
 
 test("test deployed fileToken contract", async t => {
-    const ft = t.context.ft;
+    const ft = t.context[names[1]];
     t.truthy(ft.approve);
     t.is(typeof ft.adminAddr, 'function');
     t.is(ft.adminAddr.call(), adminAcc);
