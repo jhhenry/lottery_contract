@@ -50,10 +50,11 @@ contract Lottery {
     /* redeem lottery */
     function redeemLottery(bytes lottery, bytes signature, bytes winningData) public returns (bool success){
         emit RedeemingLottery(lottery, signature, winningData, msg.sender);
-        
-        address issuer = verifySig(signature, lottery);
+
+        address issuer = verifySig(signature, lottery); 
         require(issuer != 0x00, "Signature verification failed");
-        (bytes1 ver, bytes memory rs2, bytes32 hashRs1, address dest, uint64 time, address token_address, uint256 faceValue, uint8 power) = splitLottery1(lottery); 
+        (bytes1 ver, bytes memory rs2, bytes32 hashRs1, address dest, uint64 time, address token_address, uint256 faceValue, uint8 power)
+        = splitLottery1(lottery); 
         if (dest == 0x00) {
             dest = msg.sender;
         }
@@ -76,6 +77,48 @@ contract Lottery {
         } else {
             success = false;
         }
+    }
+
+    function verifyLottery(bytes lottery, bytes signature, bytes winningData) public view returns (bool success, string error) {
+        address issuer = verifySig(signature, lottery);
+        if (issuer == 0x00) {
+            success = false;
+            error = "Signature verification failed";
+            return;
+        }
+        (bytes1 ver, bytes memory rs2, bytes32 hashRs1, address dest, uint64 time, address token_address, uint256 faceValue, uint8 power)
+        = splitLottery1(lottery); 
+        if (dest == 0x00) {
+            dest = msg.sender;
+        }
+        //AbstractFileToken fileToken = AbstractFileToken(token_address);
+       
+        if (!verifyRs1Hash(winningData, hashRs1)) {
+            error = "Hash of the random string 1 does not match.";
+            return;
+        }
+       
+        if (!verifyWinningLottery(uint8(ver), constructHashRs1Rs2(winningData, rs2), rs2, power)) {
+            error = "It is not a winning lottery";
+            return;
+        }
+
+        if (AbstractFileToken(token_address).getPledge(msg.sender) < MIN_FINE) {
+            error = "The msg.sender calling redeem should have pledge.";
+            return;
+        }
+
+        if (AbstractFileToken(token_address).allowance(issuer, address(this)) < faceValue) {
+            error = "Insufficient allowance for the issuer";
+            return;
+        }
+
+        if (AbstractFileToken(token_address).balanceOf(issuer) < faceValue) {
+            error = "Insufficient balance for the issuer";
+            return;
+        }
+
+        success = true;
     }
 
     function transfer(AbstractFileToken fileToken, address source, address dest, uint256 faceValue) private returns (bool success){
@@ -101,7 +144,7 @@ contract Lottery {
     /// Verify if a lottery wins and tranfer its face value to the winner
     function verifyWinningLottery(uint8 ver, bytes32 hashRs1Rs2, bytes rs2, uint8 power) internal pure returns (bool)
     {
-        require(ver == 0, "Version must be 0");
+        require(ver == 1, "Version must be 1");
         bytes32 hashRs2 = getHash(rs2);
 
         return verifyXOR(hashRs1Rs2, hashRs2, power);

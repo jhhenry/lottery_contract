@@ -3,9 +3,10 @@ const web3 = require('./web3Utils')
 const txnUtils = require('./txnUtils.js');
 const deployInfo = require('./deployInfo');
 const testUtils = require('./testUtils');
+const lg = require('./lottery_generator');
 
-const log = testUtils.logBlue("Redeem.test");
-const log2 = testUtils.logCyan("Redeem.succefull_redeem.test");
+const log = testUtils.logBlue("Redeem of version 0.test");
+const log2 = testUtils.logCyan("Redeem.succefull_redeem of version 0.test");
 const transRunner = new txnUtils.TransactionRunner(web3);
 
 const accounts = web3.eth.accounts
@@ -14,16 +15,12 @@ const lottery_issuer = accounts[1];
 const file_receiver = accounts[1];
 const file_sender = accounts[2];
 //const lottery_winner = file_sender;
-const rs1 = "0x5b42242734647e78333e31647b697434607b44584d7e535d2b5923712d2c";
-const hashRs1 = web3.sha3(rs1, { encoding: "hex" });
+const rs1 = "[B$'4d~x3>1d{it4`{DXM~S]+Y#q-,";//"0x5b42242734647e78333e31647b697434607b44584d7e535d2b5923712d2c";
 const rs2 = "lL=2@v!)tYw718T$do[|b)*m.9%[M.";
-var nowString = "00000" + web3.toHex(Date.now()).substring(2)
-const lotteryData = "0x001E" + web3.toHex(rs2).substring(2) + hashRs1.substring(2) + file_sender.substring(2) + nowString;
-//"0x001E6c4c3d32407621297459773731385424646f5b7c62292a6d2e39255b4d2e21e765a9a9dfebcbe94d520a2bb225cfc9c8345f330a9dd1e987b8b14d0638307c8c7a481a3dac2431745ce9b18b3bb8b6c526e7000001659a693424";
+const lotteryData = lg.assembleLottery(rs1, rs2, 0, file_sender);//"0x001E" + web3.toHex(rs2).substring(2) + hashRs1.substring(2) + file_sender.substring(2) + nowString;
 const sig = web3.eth.sign(lottery_issuer, web3.sha3(lotteryData, { encoding: "hex" }));
-//"0x393f2778c4f908edbb6c456960fecc877d57c5e3b5c85e06601e30cb601481c6517400aef340363cefee5f38f6fdfc082ff1b0945ca7465ae0a2e814b97173211c";
-log(`lotteryData:`, lotteryData);
-log(`signature:`, sig);
+// log(`lotteryData:`, lotteryData);
+// log(`signature:`, sig);
 
 
 test.before("Deloy a new lottery contract", async t => {
@@ -33,7 +30,7 @@ test.before("Deloy a new lottery contract", async t => {
     t.truthy(contracts.lottery);
     t.truthy(contracts.fileToken);
     const {lottery, fileToken} = contracts;
-    
+
     const amount = 30000;
     let r = await transRunner.syncRun(lottery.increase, adminAcc, file_receiver, amount);
     log(`executed increase txn: ${r.txn}`);
@@ -92,7 +89,7 @@ test.serial("redeem with pledge test", async t => {
     t.is(fileToken.allowance(file_receiver, lottery.address).toNumber(), approvalAmount);
 
     // Finally, call the redeemLottery again.
-    let redeem_txn = await transRunner.setGas(300000).syncRun(lottery.redeemLottery, file_sender, lotteryData, sig, rs1);
+    let redeem_txn = await transRunner.syncRun(lottery.redeemLottery, file_sender, lotteryData, sig, rs1);
     log2(`executed redeemLottery txn: ${redeem_txn.txn}`);
     t.truthy(redeem_txn.receipt.logs.length === 3, 'redeem_txn failed or worked unexpectedly.');
 

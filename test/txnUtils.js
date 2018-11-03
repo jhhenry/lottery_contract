@@ -40,7 +40,7 @@ function getReceiptPromise(web3, tx, timeout = 15) {
 class TransactionRunner {
     constructor(web3, log) {
         this.web3 = web3;
-        this.gas = 200000;
+        this.gas = 300000;
     }
 
     async syncRun(contractFunc, from, ...funcArgs) {
