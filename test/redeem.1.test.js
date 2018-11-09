@@ -74,6 +74,14 @@ test("verify test", async t => {
     t.true(r[0], `VerifyLottery failed because of the error, "${r[1]}"`);
 });
 
+test("verify failed due to insufficient pledge", async t=> {
+    const {lottery, [names[1]]: fileToken} = t.context;
+    const lotteryData2 = lg.assembleLottery(rs1, rs2, 1, file_sender, {token_addr: fileToken.address, faceValue: 501, probability: 10});
+    const r = lottery.verifyLottery(lotteryData2, sig, web3.toHex(rs1), {from: file_sender});
+    t.true(r[1].indexOf("pledge") >=0);
+    t.false(r[0], `VerifyLottery should have failed  due to insufficient pledge, "${r[1]}"`);
+});
+
 
 test("redeem successfully", async t => {
     const {lottery, [names[1]]: fileToken} = t.context;
@@ -82,7 +90,11 @@ test("redeem successfully", async t => {
    
     log(`Executing redeemLottery with {lotteryData: ${lotteryData}, sig: ${sig}, rs1: ${rs1}}`)
     const redeemTxn = await transRunner.syncRun(lottery.redeemLottery, file_sender, lotteryData, sig, web3.toHex(rs1));
+    const finalBalance = transfer_amount - pledgeAmount + faceValue;
     t.truthy(redeemTxn.receipt && redeemTxn.receipt.logs.length === 3);
-
     t.is(fileToken.balanceOf(file_sender).toNumber(), transfer_amount - pledgeAmount + faceValue);
+
+    const redeemTxn2 = await transRunner.syncRun(lottery.redeemLottery, file_sender, lotteryData, sig, web3.toHex(rs1));
+    t.truthy(redeemTxn2.receipt && redeemTxn2.receipt.logs.length === 0);
+    t.is(fileToken.balanceOf(file_sender).toNumber(), finalBalance);
 })
