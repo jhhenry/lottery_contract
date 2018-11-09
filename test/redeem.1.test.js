@@ -25,6 +25,9 @@ const contracts_names = [
 const transRunner = new txnUtils.TransactionRunner(web3);
 const rs1 = "=B<N/@Ok%;@dzYmAL%l-6pBJ)oJL{n";
 const rs2 = "giyGv#I[Q:m4&NBI&ja;rogqq~rW}]";
+const transfer_amount = 10000;
+const faceValue = 500;
+const pledgeAmount = 5000;
 let lotteryData;
 let sig;
 
@@ -38,7 +41,7 @@ test.before(
         const lottery = t.context.lottery;
         const fileToken = t.context[names[1]];
         // transfer 10000 tokens from admin  account to the file_sender who will turn in pledge and redeem a lottery
-        const transfer_amount = 10000;
+        
         const transferToSenderTxn = await transRunner.syncRun(fileToken.transfer, adminAcc, file_sender, transfer_amount);
         const transferToReceiverTxn = await transRunner.syncRun(fileToken.transfer, adminAcc, file_receiver, transfer_amount);
         t.truthy(transferToSenderTxn.receipt && transferToSenderTxn.receipt.logs.length > 0);
@@ -50,17 +53,17 @@ test.before(
         t.deepEqual(fileToken.balanceOf(file_receiver), new BigNumber(transfer_amount));
 
         const approveTxn = await transRunner.syncRun(fileToken.approve, file_receiver, lottery.address, 9000);
-        const pledgeTxn = await transRunner.syncRun(fileToken.turnInPledge, file_sender, 5000);
+        const pledgeTxn = await transRunner.syncRun(fileToken.turnInPledge, file_sender, pledgeAmount);
         t.truthy(approveTxn.receipt && approveTxn.receipt.logs.length > 0);
-        t.deepEqual(fileToken.allowance(file_receiver, lottery.address).toNumber(), 9000);
+        t.is(fileToken.allowance(file_receiver, lottery.address).toNumber(), 9000);
 
        
         t.truthy(pledgeTxn.receipt && pledgeTxn.receipt.logs.length > 0);
-        t.deepEqual(fileToken.getPledge(file_sender).toNumber(), 5000);
-        t.deepEqual(fileToken.balanceOf(file_sender).toNumber(), transfer_amount - 5000);
+        t.is(fileToken.getPledge(file_sender).toNumber(), pledgeAmount);
+        t.is(fileToken.balanceOf(file_sender).toNumber(), transfer_amount - pledgeAmount);
         console.timeEnd("before run tests");
 
-        lotteryData = lg.assembleLottery(rs1, rs2, 1, file_sender, {token_addr: fileToken.address, faceValue: 1000, probability: 10});
+        lotteryData = lg.assembleLottery(rs1, rs2, 1, file_sender, {token_addr: fileToken.address, faceValue: faceValue, probability: 10});
         sig = web3.eth.sign(lottery_issuer, web3.sha3(lotteryData, {encoding: 'hex'}));
     }
 );
@@ -74,12 +77,12 @@ test("verify test", async t => {
 
 test("redeem successfully", async t => {
     const {lottery, [names[1]]: fileToken} = t.context;
-    t.true(fileToken.balanceOf(lottery_issuer) > 1000);
-    t.true(fileToken.getPledge(file_sender) > 1000);
+    t.is(fileToken.balanceOf(lottery_issuer).toNumber(), transfer_amount);
+    t.is(fileToken.getPledge(file_sender).toNumber(), pledgeAmount);
    
     log(`Executing redeemLottery with {lotteryData: ${lotteryData}, sig: ${sig}, rs1: ${rs1}}`)
     const redeemTxn = await transRunner.syncRun(lottery.redeemLottery, file_sender, lotteryData, sig, web3.toHex(rs1));
     t.truthy(redeemTxn.receipt && redeemTxn.receipt.logs.length === 3);
 
-    t.deepEqual(fileToken.balanceOf(file_sender).toNumber(), 6000);
+    t.is(fileToken.balanceOf(file_sender).toNumber(), transfer_amount - pledgeAmount + faceValue);
 })

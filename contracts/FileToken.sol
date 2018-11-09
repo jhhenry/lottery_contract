@@ -39,4 +39,9 @@ contract FileToken is AbstractFileToken {
     function getPledge(address owner) public view returns (uint256) {
         return pledgeAccounts[owner];
     }
+
+    function checkPledge(address owner, uint faceValue, uint8 power, uint64 timestamp) public view returns (bool success) {
+        uint256 pledge = getPledge(owner);
+        success = pledge >= faceValue * 10;
+    }
 }

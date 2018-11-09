@@ -12,4 +12,6 @@ contract AbstractFileToken is EIP20 {
     function returnPledge(address to) public;
 
     function getPledge(address owner) public view returns (uint256);
+
+    function checkPledge(address owner, uint faceValue, uint8 power, uint64 timestamp) public view returns (bool success);
 }

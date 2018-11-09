@@ -59,7 +59,7 @@ contract Lottery {
             dest = msg.sender;
         }
         //AbstractFileToken fileToken = AbstractFileToken(token_address);
-        require(AbstractFileToken(token_address).getPledge(msg.sender) > MIN_FINE, "The pledge of the msg.sender calling redeem should have pledge.");
+        require(AbstractFileToken(token_address).checkPledge(msg.sender, faceValue, power, time), "The pledge of the msg.sender calling redeem should have pledge.");
 
         // bytes32 hrs2 = getHash(rs2);
         bytes32 hashRs1Rs2 = constructHashRs1Rs2(winningData, rs2);
@@ -91,7 +91,6 @@ contract Lottery {
         if (dest == 0x00) {
             dest = msg.sender;
         }
-        //AbstractFileToken fileToken = AbstractFileToken(token_address);
        
         if (!verifyRs1Hash(winningData, hashRs1)) {
             error = "Hash of the random string 1 does not match.";
@@ -103,7 +102,8 @@ contract Lottery {
             return;
         }
 
-        if (AbstractFileToken(token_address).getPledge(msg.sender) < MIN_FINE) {
+        //AbstractFileToken fileToken = AbstractFileToken(token_address);
+        if (!AbstractFileToken(token_address).checkPledge(msg.sender, faceValue, power, time)) {
             error = "The msg.sender calling redeem should have pledge.";
             return;
         }

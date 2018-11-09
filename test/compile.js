@@ -19,19 +19,27 @@ function compileLotteryContract(...interestedContracts /** Array of contract nam
     }
     const applyInterestedContracts = interestedContracts.length > 0;
     const ret = {};
-    solFiles.forEach(item => {
-        let baseName = path.basename(item);
-        let contractName = baseName.substr(0, baseName.length - 4);
-        if (applyInterestedContracts && interestedContracts.indexOf(contractName) === -1) return;
-        console.log(`Adding compiled contract ${contractName}`);
-        let key = baseName + ":" + contractName;
-        const contractItem = {abi: JSON.parse(compiled.contracts[key].interface), bytecode: "0x" + compiled.contracts[key].bytecode};
-        ret[contractName.toLowerCase()] = contractItem;
-    });
+
+    try {
+        solFiles.forEach(item => {
+            let baseName = path.basename(item);
+            let contractName = baseName.substr(0, baseName.length - 4);
+            if (applyInterestedContracts && interestedContracts.indexOf(contractName) === -1) return;
+            let key = baseName + ":" + contractName;
+            console.log(`Adding compiled contract ${key}`);
+            const contractItem = {abi: JSON.parse(compiled.contracts[key].interface), bytecode: "0x" + compiled.contracts[key].bytecode};
+            ret[contractName.toLowerCase()] = contractItem;
+        });
+        return ret;
+    } catch(err) {
+        console.log(compiled);
+        throw err;
+    }
+    
 
     //console.log(`result of comple: ${JSON.stringify(ret)}`);
 
-    return ret;
+   
 	
 }
 
@@ -47,8 +55,13 @@ function compile(solFiles) {
         let baseName = path.basename(item);
         sources[baseName] = fs.readFileSync(path.normalize(item)).toString();
     });
-    const compiled = solc.compile({sources: sources}, 1);
-    return compiled;
+    try {
+        const compiled = solc.compile({sources: sources}, 1);
+        return compiled;
+    } catch(err) {
+        console.log(`Compilation Error: ${err}`);
+    }
+   
 }
 
 module.exports.compileLotteryContract = compileLotteryContract;
