@@ -10,6 +10,12 @@ const deployedFolder = deployInfo.deployedFolder;
 const fn = deployInfo.fn;
 
 const accounts = web3.eth.accounts;
+/**
+ * 1. Unlock all accounts.
+ * 2. write contracts' info to a file
+ */
+unLockAllAccounts();
+
 
 /* create the 'deployed' folder */
 if (!fs.existsSync(deployedFolder)) {
@@ -20,17 +26,11 @@ if (fs.existsSync(fn)) {
     fs.unlinkSync(fn);
 }
 
+
 /* compile the latest Lottery contracts. */
 let compiled = compile.compileLotteryContract();
-
-
-/**
- * 1. Unlock all accounts.
- * 2. write contracts' info to a file
- */
-unLockAllAccounts();
 writeContractsInfoFile();
-//deloyLotteryContract();
+
 
 function unLockAllAccounts() {
     for (let acc of accounts) {
