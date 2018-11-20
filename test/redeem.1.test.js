@@ -41,23 +41,27 @@ test.before(
         const lottery = t.context.lottery;
         const fileToken = t.context[names[1]];
         // transfer 10000 tokens from admin  account to the file_sender who will turn in pledge and redeem a lottery
-        
-        const transferToSenderTxn = await transRunner.syncRun(fileToken.transfer, adminAcc, file_sender, transfer_amount);
-        const transferToReceiverTxn = await transRunner.syncRun(fileToken.transfer, adminAcc, file_receiver, transfer_amount);
+        // transfer 10000 tokens from admin  account to the file_receiver who issue lottery and approve the lottery contract can tranfer tokens to any account on it behalf
+        const txns = await transRunner.syncBatchRun([
+            {contractFunc:fileToken.transfer, from: adminAcc, funcArgs: [file_sender, transfer_amount]},
+            {contractFunc:fileToken.transfer, from: adminAcc, funcArgs: [file_receiver, transfer_amount]}
+        ]);
+        const transferToSenderTxn = txns[0];
+        const transferToReceiverTxn = txns[1];
         t.truthy(transferToSenderTxn.receipt && transferToSenderTxn.receipt.logs.length > 0);
         t.deepEqual(fileToken.balanceOf(file_sender), new BigNumber(transfer_amount));
-        
-        // transfer 10000 tokens from admin  account to the file_receiver who issue lottery and approve the lottery contract can tranfer tokens to any account on it behalf
-       
         t.truthy(transferToReceiverTxn.receipt && transferToReceiverTxn.receipt.logs.length > 0);
         t.deepEqual(fileToken.balanceOf(file_receiver), new BigNumber(transfer_amount));
 
-        const approveTxn = await transRunner.syncRun(fileToken.approve, file_receiver, lottery.address, 9000);
-        const pledgeTxn = await transRunner.syncRun(fileToken.turnInPledge, file_sender, pledgeAmount);
+        const txns2 = await transRunner.syncBatchRun([
+            {contractFunc: fileToken.approve, from: file_receiver, funcArgs: [lottery.address, 9000]},
+            {contractFunc: fileToken.turnInPledge, from: file_sender, funcArgs: [pledgeAmount]}
+        ]);
+
+        const approveTxn = txns2[0];
+        const pledgeTxn = txns2[1];
         t.truthy(approveTxn.receipt && approveTxn.receipt.logs.length > 0);
         t.is(fileToken.allowance(file_receiver, lottery.address).toNumber(), 9000);
-
-       
         t.truthy(pledgeTxn.receipt && pledgeTxn.receipt.logs.length > 0);
         t.is(fileToken.getPledge(file_sender).toNumber(), pledgeAmount);
         t.is(fileToken.balanceOf(file_sender).toNumber(), transfer_amount - pledgeAmount);
@@ -97,4 +101,4 @@ test("redeem successfully", async t => {
     const redeemTxn2 = await transRunner.syncRun(lottery.redeemLottery, file_sender, lotteryData, sig, web3.toHex(rs1));
     t.truthy(redeemTxn2.receipt && redeemTxn2.receipt.logs.length === 0);
     t.is(fileToken.balanceOf(file_sender).toNumber(), finalBalance);
-})
+});

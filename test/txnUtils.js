@@ -37,6 +37,23 @@ function getReceiptPromise(web3, tx, timeout = 15) {
 	);
 };
 
+function getReceiptsPromise(web3, txs, timeout = 15) {
+	return retryPromise(
+		() => {
+            const receipts = new Map();
+            txs.forEach(tx => {
+                let receipt = web3.eth.getTransactionReceipt(tx);
+                if (receipt) {
+                    receipts.set(tx, receipt);
+                }
+            })
+		
+			return receipts.size == txs.length ? receipts : null ;
+		},
+		timeout
+	);
+};
+
 class TransactionRunner {
     constructor(web3, log) {
         this.web3 = web3;
@@ -51,6 +68,26 @@ class TransactionRunner {
         const r =  await getReceiptPromise(web3, txn, 30);
         // Object.keys(contractFunc.name).forEach(prop => log(`${prop} => ${contractFunc[prop]}`));
         return {txn: txn, receipt: r};
+    }
+    
+    async syncBatchRun(vargs)
+    {
+        const transactions = [];
+        const web3 = this.web3;
+        const value = this.value;
+        if (vargs.forEach) {
+            vargs.forEach(item => {
+                const {contractFunc, from, funcArgs} = item;
+                const txn = contractFunc(...funcArgs, {from, gas: this.gas, value });
+                transactions.push(txn);
+            });
+            const receipts = await getReceiptsPromise(web3, transactions, 25);
+            const r = [];
+            transactions.forEach((txn) => {
+                r.push({txn, receipt: receipts.get(txn)});
+            });
+            return r;
+        }
     }
 
     setGas(gas) {
