@@ -41,11 +41,13 @@ class TransactionRunner {
     constructor(web3, log) {
         this.web3 = web3;
         this.gas = 300000;
+        this.value = 0;
     }
 
     async syncRun(contractFunc, from, ...funcArgs) {
         const web3 = this.web3;
-        const txn = from ? contractFunc(...funcArgs, {from: from, gas: this.gas }) : contractFunc(...funcArgs);
+        const value = this.value;
+        const txn = from ? contractFunc(...funcArgs, {from, gas: this.gas, value }) : contractFunc(...funcArgs);
         const r =  await getReceiptPromise(web3, txn, 30);
         // Object.keys(contractFunc.name).forEach(prop => log(`${prop} => ${contractFunc[prop]}`));
         return {txn: txn, receipt: r};
@@ -53,6 +55,11 @@ class TransactionRunner {
 
     setGas(gas) {
         this.gas = gas;
+        return this;
+    }
+
+    setValue(v) {
+        this.value = v;
         return this;
     }
 }

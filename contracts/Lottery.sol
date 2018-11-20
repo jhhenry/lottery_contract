@@ -20,35 +20,36 @@ contract Lottery {
         bytes32 h2;// hash of random string1 + random string2
     }
 
-    //AbstractFileToken public fileToken;
-    //address private adminAddr;
     address private creator;
     mapping(address => Escrow) private accounts;
     mapping(address => Stub[10]) private stubsMapping; // lottery issuer to lottery stub
     mapping(address => uint8) private stubsIndex; // each index store where the stub is stored
-    
-    //uint8 private power  = 18;
-    //uint256 private faceValue = 1000;
 
     modifier admin {
         require(msg.sender == creator, "Only administrator, aka the contract creator, can call this method");
         _;
     }
 
+
     constructor() public {
         creator = msg.sender;
         //fileToken = new FileToken(MAX_UINT256, "FileToken", 0, "Ft", address(this), creator);
     }
 
-    /* transfer tokens from this contract to the user account */
-    // function increase(address to, uint256 amount) public admin returns (bool success) {
-        //require(msg.sender == creator, "Only admin can call this method");
-        //fileToken.transfer(to, amount);
-        //success = true;
-    // }
+     /// Get escrow by account address
+    function getEscrow(address account) public view returns (uint256 deposite) {
+        Escrow storage esc = accounts[account];
+        deposite = esc.deposite;
+    }
+
+    /// Increase the deposite of the escrow account
+    function increase() public payable {
+        Escrow storage esc = accounts[msg.sender];
+        esc.deposite += msg.value;
+    }
 
     /* redeem lottery */
-    function redeemLottery(bytes lottery, bytes signature, bytes winningData) public returns (bool success){
+    function redeemLottery(bytes lottery, bytes signature, bytes winningData) public payable returns (bool success) {
         emit RedeemingLottery(lottery, signature, winningData, msg.sender);
 
         address issuer = verifySig(signature, lottery); 
@@ -59,7 +60,11 @@ contract Lottery {
             dest = msg.sender;
         }
         //AbstractFileToken fileToken = AbstractFileToken(token_address);
-        require(AbstractFileToken(token_address).checkPledge(msg.sender, faceValue, power, time), "The pledge of the msg.sender calling redeem should have pledge.");
+        if (token_address == 0x00) {
+            require (faceValue <= getEscrow(issuer), "The escrow of the lottery issuer is less than the face value.");
+        } else {
+            require(AbstractFileToken(token_address).checkPledge(msg.sender, faceValue, power, time), "The pledge of the msg.sender calling redeem should have pledge.");
+        }
 
         // bytes32 hrs2 = getHash(rs2);
         bytes32 hashRs1Rs2 = constructHashRs1Rs2(winningData, rs2);
@@ -69,7 +74,11 @@ contract Lottery {
         require(verifyRs1Hash(winningData, hashRs1), "Hash of the random string 1 does not match.");
        
         if (verifyWinningLottery(uint8(ver), hashRs1Rs2, rs2, power)) {
-            success = transfer(AbstractFileToken(token_address), issuer, dest, faceValue);
+            if (token_address == 0x00) {
+                success = transferEther(issuer, dest, faceValue);
+            } else {
+                success = transferToken(AbstractFileToken(token_address), issuer, dest, faceValue);
+            }
             if (success) {
                 storeStub(issuer, hashRs1, hashRs1Rs2);
                 emit RedeemedLotttery(lottery, time, faceValue, issuer, dest);
@@ -103,9 +112,16 @@ contract Lottery {
         }
 
         //AbstractFileToken fileToken = AbstractFileToken(token_address);
-        if (!AbstractFileToken(token_address).checkPledge(msg.sender, faceValue, power, time)) {
-            error = "The msg.sender calling redeem should have pledge.";
-            return;
+        if (token_address == 0) {
+            if (faceValue > getEscrow(issuer)) {
+                error = "The escrow of the lottery issuer is less than the face value.";
+                return;
+            }
+        } else {
+            if (!AbstractFileToken(token_address).checkPledge(msg.sender, faceValue, power, time)) {
+                error = "The msg.sender calling redeem should have pledge.";
+                return;
+            }
         }
 
         if (AbstractFileToken(token_address).allowance(issuer, address(this)) < faceValue) {
@@ -121,9 +137,17 @@ contract Lottery {
         success = true;
     }
 
-    function transfer(AbstractFileToken fileToken, address source, address dest, uint256 faceValue) private returns (bool success){
-        
+    function transferToken(AbstractFileToken fileToken, address source, address dest, uint256 faceValue) private returns (bool success) {
         success = fileToken.transferFrom(source, dest, faceValue);
+    }
+
+    function transferEther(address source, address dest, uint256 faceValue) private returns (bool success) {
+        Escrow storage esc = accounts[source];
+        if (esc.deposite >= faceValue) {
+            esc.deposite -= faceValue;
+            dest.transfer(faceValue);
+            success = true;
+        }
     }
     
     function verifySig(bytes memory signature, bytes memory lottery) public pure returns (address addr) {
