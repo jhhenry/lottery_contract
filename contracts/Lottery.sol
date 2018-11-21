@@ -119,21 +119,18 @@ contract Lottery {
             }
         } else {
             if (!AbstractFileToken(token_address).checkPledge(msg.sender, faceValue, power, time)) {
-                error = "The msg.sender calling redeem should have pledge.";
+                error = "The msg.sender calling redeem does not have enough pledge.";
+                return;
+            }
+            if (AbstractFileToken(token_address).allowance(issuer, address(this)) < faceValue) {
+                error = "Insufficient allowance for the issuer";
+                return;
+            }
+            if (AbstractFileToken(token_address).balanceOf(issuer) < faceValue) {
+                error = "Insufficient balance for the issuer";
                 return;
             }
         }
-
-        if (AbstractFileToken(token_address).allowance(issuer, address(this)) < faceValue) {
-            error = "Insufficient allowance for the issuer";
-            return;
-        }
-
-        if (AbstractFileToken(token_address).balanceOf(issuer) < faceValue) {
-            error = "Insufficient balance for the issuer";
-            return;
-        }
-
         success = true;
     }
 

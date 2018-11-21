@@ -72,21 +72,6 @@ test.before(
     }
 );
 
-test("verify test", async t => {
-    const {lottery, } = t.context;
-    const r = lottery.verifyLottery(lotteryData, sig, web3.toHex(rs1), {from: file_sender});
-    t.true(r[0], `VerifyLottery failed because of the error, "${r[1]}"`);
-});
-
-test("verify failed due to insufficient pledge", async t=> {
-    const {lottery, [names[1]]: fileToken} = t.context;
-    const lotteryData2 = lg.assembleLottery(rs1, rs2, 1, file_sender, {token_addr: fileToken.address, faceValue: 501, probability: 10});
-    const r = lottery.verifyLottery(lotteryData2, sig, web3.toHex(rs1), {from: file_sender});
-    t.true(r[1].indexOf("pledge") >=0);
-    t.false(r[0], `VerifyLottery should have failed  due to insufficient pledge, "${r[1]}"`);
-});
-
-
 test("redeem successfully", async t => {
     const {lottery, [names[1]]: fileToken} = t.context;
     t.is(fileToken.balanceOf(lottery_issuer).toNumber(), transfer_amount);
