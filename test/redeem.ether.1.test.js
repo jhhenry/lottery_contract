@@ -1,5 +1,4 @@
 const test = require('ava');
-const BigNumber = require('bignumber.js');
 const web3 = require('./web3Utils');
 const deployInfo = require('./deployInfo');
 const txnUtils = require('./txnUtils.js');
