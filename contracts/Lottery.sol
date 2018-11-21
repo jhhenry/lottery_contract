@@ -112,7 +112,7 @@ contract Lottery {
         }
 
         //AbstractFileToken fileToken = AbstractFileToken(token_address);
-        if (token_address == 0) {
+        if (token_address == 0x00) {
             if (faceValue > getEscrow(issuer)) {
                 error = "The escrow of the lottery issuer is less than the face value.";
                 return;
