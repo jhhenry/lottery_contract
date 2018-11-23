@@ -64,6 +64,7 @@ class TransactionRunner {
     async syncRun(contractFunc, from, ...funcArgs) {
         const web3 = this.web3;
         const value = this.value;
+        this.value = 0; // should not affect next run
         const txn = from ? contractFunc(...funcArgs, {from, gas: this.gas, value }) : contractFunc(...funcArgs);
         const r =  await getReceiptPromise(web3, txn, 30);
         // Object.keys(contractFunc.name).forEach(prop => log(`${prop} => ${contractFunc[prop]}`));

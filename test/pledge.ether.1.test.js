@@ -38,3 +38,10 @@ test.serial("turn in more ", async t => {
     let p = lottery.getPledge({from: file_sender});
     t.is(p.toNumber(), 110 * faceValue);
 });
+
+test.serial("withdraw all pledge ", async t => {
+    const lottery = t.context.lottery;
+    await transRunner.syncRun(lottery.withdrawPledge, file_sender);
+    let p = lottery.getPledge({from: file_sender});
+    t.is(p.toNumber(), 0);
+});
