@@ -31,7 +31,7 @@ let lotteryOfEther;
 let sig2;
 
 test.before(
-    "deploy lottery and fileToken contract respectively", 
+    "deploy lottery contract", 
     async t => {
         await testUtils.confirmContractsDeployed(contracts_names, deployInfo, web3, adminAcc, t, {testName: "Redeem(version 1) test"});
 
@@ -43,6 +43,10 @@ test.before(
         t.truthy(r.receipt, `The receipt of ${r.txn} should not be null.`);
         let e2 = lottery.getEscrow(file_receiver);
         t.is(e2.minus(initE).toString(), transferEther, "the balance should have been increased ");
+        //file_sender, that is, the lottery redeemer, turn in enough pledge
+        await transRunner.setValue(10 * faceValue).syncRun(lottery.turnInPledge, file_sender);
+        let p = lottery.getPledge({from: file_sender});
+        t.is(p.toNumber(), 10 * faceValue);
 
         let token_addr = "0x" + '0'.repeat(40);
        

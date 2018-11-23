@@ -20,6 +20,8 @@ contract Lottery {
         bytes32 h2;// hash of random string1 + random string2
     }
 
+    mapping(address => uint256) pledges;
+
     address private creator;
     mapping(address => Escrow) private accounts;
     mapping(address => Stub[10]) private stubsMapping; // lottery issuer to lottery stub
@@ -48,6 +50,18 @@ contract Lottery {
         esc.deposite += msg.value;
     }
 
+    function turnInPledge() public payable {
+        pledges[msg.sender] += msg.value;
+    }
+
+    function getPledge() public view returns (uint256 r) {
+        r = pledges[msg.sender];
+    }
+
+    function withdrawPledge() public {
+        msg.sender.transfer(pledges[msg.sender]);
+    }
+
     /* redeem lottery */
     function redeemLottery(bytes lottery, bytes signature, bytes winningData) public payable returns (bool success) {
         emit RedeemingLottery(lottery, signature, winningData, msg.sender);
@@ -61,7 +75,8 @@ contract Lottery {
         }
         //AbstractFileToken fileToken = AbstractFileToken(token_address);
         if (token_address == 0x00) {
-            require (faceValue <= getEscrow(issuer), "The escrow of the lottery issuer is less than the face value.");
+            require(faceValue <= getEscrow(issuer), "The escrow of the lottery issuer is less than the face value.");
+            require(pledges[msg.sender] >= faceValue * 10, "The ether pledged by the lottery redeemer is less than 10 times of the face value.");
         } else {
             require(AbstractFileToken(token_address).checkPledge(msg.sender, faceValue, power, time), "The pledge of the msg.sender calling redeem should have pledge.");
         }
@@ -115,6 +130,10 @@ contract Lottery {
         if (token_address == 0x00) {
             if (faceValue > getEscrow(issuer)) {
                 error = "The escrow of the lottery issuer is less than the face value.";
+                return;
+            }
+            if (pledges[msg.sender] >= faceValue * 10) {
+                error = "The ether pledged by the lottery redeemer is less than 10 times of the face value.";
                 return;
             }
         } else {
