@@ -66,7 +66,7 @@ class TransactionRunner {
         const value = this.value;
         this.value = 0; // should not affect next run
         const txn = from ? contractFunc(...funcArgs, {from, gas: this.gas, value }) : contractFunc(...funcArgs);
-        const r =  await getReceiptPromise(web3, txn, 30);
+        const r =  await getReceiptPromise(web3, txn, 45);
         // Object.keys(contractFunc.name).forEach(prop => log(`${prop} => ${contractFunc[prop]}`));
         return {txn: txn, receipt: r};
     }
@@ -82,7 +82,7 @@ class TransactionRunner {
                 const txn = contractFunc(...funcArgs, {from, gas: this.gas, value });
                 transactions.push(txn);
             });
-            const receipts = await getReceiptsPromise(web3, transactions, 25);
+            const receipts = await getReceiptsPromise(web3, transactions, 45);
             const r = [];
             transactions.forEach((txn) => {
                 r.push({txn, receipt: receipts.get(txn)});
