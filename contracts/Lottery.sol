@@ -59,6 +59,7 @@ contract Lottery {
     }
 
     function withdrawPledge() public {
+        pledges[msg.sender] = 0;
         msg.sender.transfer(pledges[msg.sender]);
     }
 
