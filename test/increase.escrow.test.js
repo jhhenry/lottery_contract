@@ -4,7 +4,6 @@ const web3 = require('./web3Utils');
 const deployInfo = require('./deployInfo');
 const testUtils = require('./testUtils');
 
-const log = testUtils.logBlue("Increase(version 1).test");
 const transRunner = new txnUtils.TransactionRunner(web3);
 
 const accounts = web3.eth.accounts
