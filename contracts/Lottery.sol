@@ -11,7 +11,7 @@ contract Lottery {
     event RedeemedLotttery(bytes lottery, uint64 issuingTime, uint256 faceValue, address issuer, address winner);
 
     struct Escrow {
-        uint deposite;
+        uint deposit;
     }
     
     struct Stub {
@@ -35,19 +35,27 @@ contract Lottery {
 
     constructor() public {
         creator = msg.sender;
-        //fileToken = new FileToken(MAX_UINT256, "FileToken", 0, "Ft", address(this), creator);
     }
 
      /// Get escrow by account address
-    function getEscrow(address account) public view returns (uint256 deposite) {
+    function getEscrow(address account) public view returns (uint256 deposit) {
         Escrow storage esc = accounts[account];
-        deposite = esc.deposite;
+        deposit = esc.deposit;
     }
 
-    /// Increase the deposite of the escrow account
+    /// Increase the deposit of the escrow account
     function increase() public payable {
         Escrow storage esc = accounts[msg.sender];
-        esc.deposite += msg.value;
+        esc.deposit += msg.value;
+    }
+
+    function withdrawEscrow() public {
+        Escrow storage esc = accounts[msg.sender];
+        uint256 deposit = esc.deposit;
+        if (deposit > 0) {
+            esc.deposit = 0;
+            msg.sender.transfer(deposit);
+        }
     }
 
     function turnInPledge() public payable {
@@ -160,8 +168,8 @@ contract Lottery {
 
     function transferEther(address source, address dest, uint256 faceValue) private returns (bool success) {
         Escrow storage esc = accounts[source];
-        if (esc.deposite >= faceValue) {
-            esc.deposite -= faceValue;
+        if (esc.deposit >= faceValue) {
+            esc.deposit -= faceValue;
             dest.transfer(faceValue);
             success = true;
         }

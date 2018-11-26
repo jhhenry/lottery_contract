@@ -31,5 +31,12 @@ test.serial('test increase escrow (in ether)', async t => {
     const r = await transRunner.setValue(transferAmount).syncRun(lottery.increase, file_receiver);
 	t.truthy(r.receipt, `The receipt of ${r.txn} should not be null.`);
     let e2 = lottery.getEscrow(file_receiver);
-    t.is(e2.minus(initE).toString(), transferAmount, "the balance should have been increased ")
+    t.is(e2.minus(initE).toString(), transferAmount, "the escrow should have been increased.");
+});
+
+test.serial("test withdraw all escrow", async t => {
+    const lottery = t.context.lottery;
+    await transRunner.syncRun(lottery.withdrawEscrow, file_receiver);
+    let e2 = lottery.getEscrow(file_receiver);
+    t.is(e2.toNumber(), 0, "the escrow should have been 0.");
 });
