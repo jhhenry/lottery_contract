@@ -66,9 +66,9 @@ contract Lottery {
         r = pledges[msg.sender];
     }
 
-    function withdrawPledge() public {
-        pledges[msg.sender] = 0;
-        msg.sender.transfer(pledges[msg.sender]);
+    function withdrawPledge(address dest) public admin {
+        pledges[dest] = 0;
+        dest.transfer(pledges[dest]);
     }
 
     /* redeem lottery */
