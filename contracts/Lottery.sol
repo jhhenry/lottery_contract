@@ -20,7 +20,8 @@ contract Lottery {
         bytes32 h2;// hash of random string1 + random string2
     }
 
-    mapping(address => uint256) pledges;
+    mapping(address => uint256) private pledges;
+    mapping(address => mapping(address => uint256)) private tokenPledges;
 
     address private creator;
     mapping(address => Escrow) private accounts;
@@ -71,6 +72,11 @@ contract Lottery {
         dest.transfer(pledges[dest]);
     }
 
+    function turnInTokenPledge(address token, uint256 amount) public {
+        (EIP20(token)).transferFrom(msg.sender, address(this), amount);
+        tokenPledges[token][msg.sender] += amount;
+    }
+
     /* redeem lottery */
     function redeemLottery(bytes lottery, bytes signature, bytes winningData) public payable returns (bool success) {
         emit RedeemingLottery(lottery, signature, winningData, msg.sender);
@@ -87,7 +93,7 @@ contract Lottery {
             require(faceValue <= getEscrow(issuer), "The escrow of the lottery issuer is less than the face value.");
             require(pledges[msg.sender] >= faceValue * 10, "The ether pledged by the lottery redeemer is less than 10 times of the face value.");
         } else {
-            require(AbstractFileToken(token_address).checkPledge(msg.sender, faceValue, power, time), "The pledge of the msg.sender calling redeem should have pledge.");
+            require(tokenPledges[token_address][msg.sender] >= faceValue * 10 || AbstractFileToken(token_address).checkPledge(msg.sender, faceValue, power, time), "The pledge of the msg.sender calling redeem should have pledge.");
         }
 
         // bytes32 hrs2 = getHash(rs2);
