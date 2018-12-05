@@ -78,7 +78,7 @@ contract Lottery {
     }
 
     /* redeem lottery */
-    function redeemLottery(bytes lottery, bytes signature, bytes winningData) public payable returns (bool success) {
+    function redeemLottery(bytes lottery, bytes signature, bytes winningData) public returns (bool success) {
         emit RedeemingLottery(lottery, signature, winningData, msg.sender);
 
         address issuer = verifySig(signature, lottery); 
