@@ -83,7 +83,7 @@ contract Lottery {
 
         address issuer = verifySig(signature, lottery); 
         require(issuer != 0x00, "Signature verification failed");
-        (bytes1 ver, bytes memory rs2, bytes32 hashRs1, address dest, uint64 time, address token_address, uint256 faceValue, uint8 power)
+        (bytes memory rs2, bytes32 hashRs1, address dest, uint64 time, address token_address, uint256 faceValue, uint8 power)
         = splitLottery1(lottery); 
         if (dest == 0x00) {
             dest = msg.sender;
@@ -103,7 +103,7 @@ contract Lottery {
        
         require(verifyRs1Hash(winningData, hashRs1), "Hash of the random string 1 does not match.");
        
-        if (verifyWinningLottery(uint8(ver), hashRs1Rs2, rs2, power)) {
+        if (verifyWinningLottery(hashRs1Rs2, rs2, power)) {
             if (token_address == 0x00) {
                 success = transferEther(issuer, dest, faceValue);
             } else {
@@ -125,7 +125,7 @@ contract Lottery {
             error = "Signature verification failed";
             return;
         }
-        (bytes1 ver, bytes memory rs2, bytes32 hashRs1, address dest, uint64 time, address token_address, uint256 faceValue, uint8 power)
+        (bytes memory rs2, bytes32 hashRs1, address dest, uint64 time, address token_address, uint256 faceValue, uint8 power)
         = splitLottery1(lottery); 
         if (dest == 0x00) {
             dest = msg.sender;
@@ -136,7 +136,7 @@ contract Lottery {
             return;
         }
        
-        if (!verifyWinningLottery(uint8(ver), constructHashRs1Rs2(winningData, rs2), rs2, power)) {
+        if (!verifyWinningLottery(constructHashRs1Rs2(winningData, rs2), rs2, power)) {
             error = "It is not a winning lottery";
             return;
         }
@@ -197,9 +197,8 @@ contract Lottery {
     }
 
     /// Verify if a lottery wins and tranfer its face value to the winner
-    function verifyWinningLottery(uint8 ver, bytes32 hashRs1Rs2, bytes rs2, uint8 power) internal pure returns (bool)
+    function verifyWinningLottery(bytes32 hashRs1Rs2, bytes rs2, uint8 power) internal pure returns (bool)
     {
-        require(ver == 1, "Version must be 1");
         bytes32 hashRs2 = getHash(rs2);
 
         return verifyXOR(hashRs1Rs2, hashRs2, power);
@@ -323,10 +322,10 @@ contract Lottery {
     }
 
     function splitLottery1(bytes memory lottery) public pure 
-    returns (bytes1 ver, bytes rs2, bytes32 hashRs1, address addr, uint64 time, address token_addr, uint256 faceValue, uint8 power)
+    returns (bytes rs2, bytes32 hashRs1, address addr, uint64 time, address token_addr, uint256 faceValue, uint8 power)
     {
         require(lottery.length == 145, "The bytes length of the lottery of version 1 must be 195");
-        ver = lottery[0];
+        bytes1 ver = lottery[0];
         require(ver == 1, "Only version 1 is supported.");
        
         uint8 len1 = uint8(lottery[1]); // len of rs2
