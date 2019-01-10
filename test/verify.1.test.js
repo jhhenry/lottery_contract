@@ -106,7 +106,7 @@ test.serial("insufficient balance", async t => {
         //log(`\nft.address: ${fileToken.address}\naddress   : ${addr}\nwinningLottery:${winningLottery}`);
         const sig = web3.eth.sign(lottery_issuer, web3.sha3(winningLottery, { encoding: 'hex' }));
         const r = lottery.verifyLottery(winningLottery, sig, web3.toHex(rs1), { from: file_sender });
-        t.false(r[0], `VerifyLottery should have failed due to insufficient pledge. "${r[1]}"`);
+        t.false(r[0], `VerifyLottery should have failed due to insufficient balance. "${r[1]}"`);
         t.is(r[1], "Insufficient balance for the issuer");
     });
 });
@@ -124,7 +124,7 @@ test.serial("insufficient allowance", async t => {
         //log(`\nft.address: ${fileToken.address}\naddress   : ${addr}\nwinningLottery:${winningLottery}`);
         const sig = web3.eth.sign(lottery_issuer, web3.sha3(winningLottery, { encoding: 'hex' }));
         const r = lottery.verifyLottery(winningLottery, sig, web3.toHex(rs1), { from: file_sender });
-        t.false(r[0], `VerifyLottery should have failed due to insufficient pledge. "${r[1]}"`);
+        t.false(r[0], `VerifyLottery should have failed due to insufficient allowance. "${r[1]}"`);
         t.is(r[1], "Insufficient allowance for the issuer");
     });
 });
@@ -186,15 +186,30 @@ test("insufficient escrow", async t => {
 });
 
 
-test("insufficient pledge", async t => {
+test("insufficient pledge in the lottery contract", async t => {
     const { lottery, [names[1]]: fileToken} = t.context;
     rsList.forEach(item => {
         const {rs1, rs2} = item;
+        /* case of using the lottery contract's built-in 10 multipling check pledge */
         const winningLottery = lg.assembleLottery(rs1, rs2, 1, file_sender, { token_addr: fileToken.address, faceValue: 501, probability: 10 });
         //log(`\nft.address: ${fileToken.address}\naddress   : ${addr}\nwinningLottery:${winningLottery}`);
         const sig = web3.eth.sign(lottery_issuer, web3.sha3(winningLottery, { encoding: 'hex' }));
         const r = lottery.verifyLottery(winningLottery, sig, web3.toHex(rs1), { from: file_sender });
         t.false(r[0], `VerifyLottery should have failed due to insufficient pledge. "${r[1]}"`);
         t.is(r[1], "The msg.sender calling redeem does not have enough pledge.");
+
+        /** case of less than pledge using the checkPledge of the file token*/
+        const lottery_with_checkPledgeAware_token = lg.assembleLottery(rs1, rs2, 1, file_sender, { token_addr: fileToken.address, faceValue: 501, probability: 10, token_type: 1 });
+        const sig2 = web3.eth.sign(lottery_issuer, web3.sha3(lottery_with_checkPledgeAware_token, { encoding: 'hex' }));
+        const r2 = lottery.verifyLottery(lottery_with_checkPledgeAware_token, sig2, web3.toHex(rs1), { from: file_sender });
+        t.false(r2[0], `VerifyLottery should have failed due to insufficient pledge. "${r[1]}"`);
+        t.is(r2[1], "The msg.sender calling redeem does not have enough pledge.");
+
+        /* case of enough pledge in the file token */
+        const lottery_with_checkPledgeAware_token2 = lg.assembleLottery(rs1, rs2, 1, file_sender, { token_addr: fileToken.address, faceValue: 10, probability: 10, token_type: 1 });
+        const sig3 = web3.eth.sign(lottery_issuer, web3.sha3(lottery_with_checkPledgeAware_token2, { encoding: 'hex' }));
+        const r3 = lottery.verifyLottery(lottery_with_checkPledgeAware_token2, sig3, web3.toHex(rs1), { from: file_sender });
+        t.true(r3[0], `VerifyLottery should have succeeded.`);
+
     });
 });
