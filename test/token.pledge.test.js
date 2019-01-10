@@ -68,7 +68,7 @@ test.before(
         t.is(fileToken.balanceOf(file_sender).toNumber(), transfer_amount);
         console.timeEnd("before run tests");
 
-        lotteryData = lg.assembleLottery(rs1, rs2, 1, file_sender, {token_addr: fileToken.address, faceValue: faceValue, probability: 10});
+        lotteryData = lg.assembleLottery(rs1, rs2, 1, file_sender, {token_addr: fileToken.address, faceValue: faceValue, probability: 10, token_type: 0});
         sig = web3.eth.sign(lottery_issuer, web3.sha3(lotteryData, {encoding: 'hex'}));
     }
 );
@@ -93,7 +93,7 @@ test.serial("redeem after file_sender turning in enough eip20 pledge", async t=>
     const turnInTxn = await transRunner.syncRun(lottery.turnInTokenPledge, file_sender, fileToken.address, pledgeAmount);
     t.truthy(turnInTxn.receipt.logs.length > 0);
     t.is(fileToken.balanceOf(lottery.address).minus(initToken).toNumber(), pledgeAmount);
-
+    
     const redeemTxn = await transRunner.syncRun(lottery.redeemLottery, file_sender, lotteryData, sig, web3.toHex(rs1));
     t.truthy(redeemTxn.receipt.logs.length === 3);
     const finalBalance = transfer_amount - pledgeAmount + faceValue;

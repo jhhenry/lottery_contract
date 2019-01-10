@@ -2,6 +2,8 @@
 const fs = require('fs');
 const Web3 = require('web3')
 const web3 = new Web3();
+//const testUtils = require('./testUtils');
+//const log = testUtils.logBlue("lottery generator");
 
 
 function generate(version, filePaths, options = {winner_address: "0x7c8c7a481a3dac2431745ce9b18b3bb8b6c526e7" }) {
@@ -24,7 +26,9 @@ function assembleLottery(rs1, rs2, ver, winner_address, options) {
         return ver0;
     } else if (ver === 1) {
         if (options.token_addr && Number.isInteger(options.faceValue) && Number.isInteger(options.probability)) {
-            const ver1 = ver0 + options.token_addr.substring(2) + intToHex(options.faceValue, 32) + intToHex(options.probability);
+            const token_type_f = options.token_type === 0 ? intToHex(options.token_type) : intToHex(1);
+            //log(`token_type_f: ${token_type_f}`);
+            const ver1 = ver0 + options.token_addr.substring(2) + intToHex(options.faceValue, 32) + intToHex(options.probability) + token_type_f;
             return ver1;
         } else {
             throw new Error(`unsupported arguments in ${options}. The version 1 need token_addr, faceValue, probability`);

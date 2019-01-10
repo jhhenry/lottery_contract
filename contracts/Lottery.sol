@@ -83,7 +83,7 @@ contract Lottery {
 
         address issuer = verifySig(signature, lottery); 
         require(issuer != 0x00, "Signature verification failed");
-        (bytes memory rs2, bytes32 hashRs1, address dest, uint64 time, address token_address, uint256 faceValue, uint8 power)
+        (bytes memory rs2, bytes32 hashRs1, address dest, uint64 time, address token_address, uint256 faceValue, uint8 power, bytes1 token_type)
         = splitLottery1(lottery); 
         if (dest == 0x00) {
             dest = msg.sender;
@@ -93,7 +93,11 @@ contract Lottery {
             require(faceValue <= getEscrow(issuer), "The escrow of the lottery issuer is less than the face value.");
             require(pledges[msg.sender] >= faceValue * 10, "The ether pledged by the lottery redeemer is less than 10 times of the face value.");
         } else {
-            require(tokenPledges[token_address][msg.sender] >= faceValue * 10 || AbstractFileToken(token_address).checkPledge(msg.sender, faceValue, power, time), "The pledge of the msg.sender calling redeem should have pledge.");
+            if (token_type == 0x00) {
+                require(tokenPledges[token_address][msg.sender] >= faceValue * 10, "The pledge of the msg.sender calling redeem should have pledge.");
+            } else if (token_type == 0x01) {
+                require(AbstractFileToken(token_address).checkPledge(msg.sender, faceValue, power, time), "The pledge of the msg.sender calling redeem should have pledge.");
+            }  
         }
 
         // bytes32 hrs2 = getHash(rs2);
@@ -125,7 +129,7 @@ contract Lottery {
             error = "Signature verification failed";
             return;
         }
-        (bytes memory rs2, bytes32 hashRs1, address dest, uint64 time, address token_address, uint256 faceValue, uint8 power)
+        (bytes memory rs2, bytes32 hashRs1, address dest, uint64 time, address token_address, uint256 faceValue, uint8 power, bytes1 token_type)
         = splitLottery1(lottery); 
         if (dest == 0x00) {
             dest = msg.sender;
@@ -152,10 +156,21 @@ contract Lottery {
                 return;
             }
         } else {
-            if (!AbstractFileToken(token_address).checkPledge(msg.sender, faceValue, power, time)) {
-                error = "The msg.sender calling redeem does not have enough pledge.";
+            if (token_type == 0x00) {
+                if (tokenPledges[token_address][msg.sender] < faceValue * 10) {
+                    error = "The msg.sender does not have 10 times of the face value for the pledge.";
+                    return;
+                }
+            } else if (token_type == 0x01) {
+                if (!AbstractFileToken(token_address).checkPledge(msg.sender, faceValue, power, time)) {
+                    error = "The msg.sender calling redeem does not have enough pledge.";
+                    return;
+                }
+            } else {
+                error = "The token_type can only be 0 or 1.";
                 return;
             }
+            
             if (AbstractFileToken(token_address).allowance(issuer, address(this)) < faceValue) {
                 error = "Insufficient allowance for the issuer";
                 return;
@@ -322,9 +337,9 @@ contract Lottery {
     }
 
     function splitLottery1(bytes memory lottery) public pure 
-    returns (bytes rs2, bytes32 hashRs1, address addr, uint64 time, address token_addr, uint256 faceValue, uint8 power)
+    returns (bytes rs2, bytes32 hashRs1, address addr, uint64 time, address token_addr, uint256 faceValue, uint8 power, bytes1 token_type)
     {
-        require(lottery.length == 145, "The bytes length of the lottery of version 1 must be 195");
+        require(lottery.length == 145 || lottery.length == 146, "The bytes length of the lottery of version 1 must be 145 or 146");
         bytes1 ver = lottery[0];
         require(ver == 1, "Only version 1 is supported.");
        
@@ -347,6 +362,11 @@ contract Lottery {
            faceValue := mload(add(lottery, offset))
            offset := add(offset, 1)
            power := mload(add(lottery, offset))
-        }        
+        }
+        if (lottery.length == 146) {
+            token_type = lottery[145];
+        } else {
+            token_type = 0x00;
+        }
     }
 }
