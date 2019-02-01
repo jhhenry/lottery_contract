@@ -201,18 +201,18 @@ contract Lottery {
         addr = recoverSigner(prefixedHashed, signature);
     }
     
-    function verifyRs1Hash(bytes rs1, bytes32 hashRs1) internal pure returns (bool eq) {
+    function verifyRs1Hash(bytes rs1, bytes32 hashRs1) public pure returns (bool eq) {
         eq = false;
         bytes32 actual = getHash(rs1);
         eq = (hashRs1 == actual);
     }
     
-    function getHash(bytes data) internal pure returns (bytes32 h) {
+    function getHash(bytes data) public pure returns (bytes32 h) {
         h = keccak256(data);
     }
 
     /// Verify if a lottery wins and tranfer its face value to the winner
-    function verifyWinningLottery(bytes32 hashRs1Rs2, bytes rs2, uint8 power) internal pure returns (bool)
+    function verifyWinningLottery(bytes32 hashRs1Rs2, bytes rs2, uint8 power) public pure returns (bool)
     {
         bytes32 hashRs2 = getHash(rs2);
 
@@ -339,7 +339,6 @@ contract Lottery {
     function splitLottery1(bytes memory lottery) public pure 
     returns (bytes rs2, bytes32 hashRs1, address addr, uint64 time, address token_addr, uint256 faceValue, uint8 power, bytes1 token_type)
     {
-        require(lottery.length == 145 || lottery.length == 146, "The bytes length of the lottery of version 1 must be 145 or 146");
         bytes1 ver = lottery[0];
         require(ver == 1, "Only version 1 is supported.");
        
@@ -348,6 +347,12 @@ contract Lottery {
         for (uint8 i = 0; i < len1; i++) {
             rs2[i] = lottery[i + 2];
         }
+        require(len1 >= 16 && len1 <= 32, "The length of rs2 must be equal to or greater than 16.");
+        
+        uint256 expectedLen = lottery.length - uint256(len1);
+        require(expectedLen == 115 
+            || expectedLen == 116,
+            "The bytes length of the lottery of version 1 must be 145 or 146");
 
         uint8 offset = len1 + 2;
         assembly {
@@ -363,8 +368,10 @@ contract Lottery {
            offset := add(offset, 1)
            power := mload(add(lottery, offset))
         }
-        if (lottery.length == 146) {
-            token_type = lottery[145];
+        
+        //token_type = bytes1(expectedLen);
+        if (expectedLen == 116) {
+            token_type = lottery[lottery.length - 1];
         } else {
             token_type = 0x00;
         }
