@@ -6,7 +6,7 @@ const txnUtils = require('./txnUtils.js');
 const testUtils = require('./testUtils');
 const lg = require('./lottery_generator');
 
-const log = testUtils.logBlue("Redeem(version 1).test");
+const log = testUtils.logBlue("Verify(version 1).test");
 
 const accounts = web3.eth.accounts
 const adminAcc = accounts[0];
@@ -49,7 +49,7 @@ test.before(
     async t => {
         console.time("before run tests");
         log("Running before of Redeem.1.test");
-        await testUtils.confirmContractsDeployed(contracts_names, deployInfo, web3, adminAcc, t, { testName: "Redeem(version 1) test" });
+        await testUtils.confirmContractsDeployed(contracts_names, deployInfo, web3, adminAcc, t, { testName: "Verify(version 1) test" });
 
         const lottery = t.context.lottery;
         const fileToken = t.context[names[1]];
