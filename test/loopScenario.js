@@ -4,11 +4,13 @@ const testUtils = require('./testUtils');
 const deployInfo = require('./deployInfo');
 const cryptoRandomString = require('crypto-random-string');
 const keccak256 = require('keccak256');
+const net = require('net');
 const lg = require('./lottery_generator');
 
 const log = testUtils.logBlue("loopScenario.js"); 
 
-/** 1. connect to a ether node
+/** 
+ *  1. connect to a ether node
  *  2. instantiate a contract
  *  3. construct a contract instance.
  *  4. generate random string pairs
@@ -37,25 +39,58 @@ const contracts_names = [
 ];
 
 const transRunner = new txnUtils.TransactionRunner(web3);
-
+unLockAllAccounts();
 deploy(web3, adminAcc, contracts_names).then(r => {
     const contracts = r;
-    Object.keys(contracts[0]).forEach(k => log(`${k} : ${contracts[0][k]}`))
+    // Object.keys(contracts[0]).forEach(k => log(`${k} : ${contracts[0][k]}`))
     log(`contracts deployed: ${contracts[0]}\n ${contracts[1].simplefiletoken}`);
     const lottery = contracts[0].lottery;
     const fileToken = contracts[1][names[1]];
+    const server = sendContractAddress(lottery);
     beforeRedeem(transRunner, lottery, fileToken).then(async r=> {
         // log(`lottery.redeemLottery: ${lottery.redeemLottery}`);
         // Object.keys(lottery).forEach(k => log(`lottery.${k}: ${lottery[k]}`));
         const targetN = 11;
         const rsPairs = look4WinningStrings(lottery, targetN);
         //assemble & redeem lottery
-        await redeem(rsPairs, lottery, fileToken);
+        await redeem(rsPairs, lottery, fileToken); // all redeem actions will succeed
         for (let i = 0; i < 3; i++) {
             redeem(rsPairs, lottery, fileToken);
         }
-    })
+       
+    });
+    server.close();
 });
+
+function sendContractAddress(lottery) {
+    const out = {address: lottery.address, abi: lottery.abi};
+    const server  = new net.Server((c) => {
+    // 'connection' listener
+        console.log('client connected');
+        c.on('end', () => {
+            console.log('client disconnected');
+        });
+        c.on('data', data => {
+            console.log(`received data from client ${c.localPort}: ${data}`)
+            if (data == "request contract address") {
+                console.log("received contract address request");
+                c.write(JSON.stringify(out));
+                //server.close();
+            }
+        });
+    });
+    server.on('error', (err) => {
+        throw err;
+    });
+    server.listen({
+        host: 'localhost',
+        port: 8124,
+        exclusive: true
+    }, () => {
+        console.log('server bound');
+    });
+    return server;
+}
 
 async function redeem(rsPairs, lottery, fileToken) {
     let lastB = transfer_amount - pledgeAmount;
@@ -130,4 +165,12 @@ function look4WinningStrings(lottery, targetNumber=11)
     }
     log(`tryNum: ${tryNum}; foundNum: ${foundNum}`);
     return pairs;
+}
+
+function unLockAllAccounts() {
+    for (let acc of accounts) {
+        if (!web3.personal.unlockAccount(acc, 'highsharp', 36000)) {
+            console.error(`failed to unlock account: ${acc}`);
+        }
+    }
 }
