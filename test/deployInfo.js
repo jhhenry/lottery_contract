@@ -4,7 +4,7 @@ const testUtils = require('./testUtils');
 const log = testUtils.logMagenta("deployInfo");
 
 const deployedFolder = 'deployed';
-const fn = deployedFolder + '/' + 'deployed.json';
+const fn = __dirname + '/' + deployedFolder + '/' + 'deployed.json';
 //var fileContent;
 
 let cached;

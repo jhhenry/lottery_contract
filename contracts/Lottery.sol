@@ -8,7 +8,7 @@ contract Lottery {
     uint16 constant private MIN_FINE = 1000;
 
     event RedeemingLottery(bytes lottery, bytes sig, bytes winningData, address sender);
-    event RedeemedLotttery(bytes lottery, uint64 issuingTime, uint256 faceValue, address issuer, address winner);
+    event RedeemedLotttery(bytes lottery, bytes rs1, bytes rs2, uint256 faceValue, address token_address, address issuer, address winner, address sender);
 
     struct Escrow {
         uint deposit;
@@ -115,7 +115,8 @@ contract Lottery {
             }
             if (success) {
                 storeStub(issuer, hashRs1, hashRs1Rs2);
-                emit RedeemedLotttery(lottery, time, faceValue, issuer, dest);
+                // bytes lottery, bytes rs1, bytes rs2, uint64 issuingTime, uint256 power, uint256 faceValue,  address token_address, address issuer, address winner, address sender
+                emit RedeemedLotttery(lottery, winningData, rs2, faceValue, token_address, issuer, dest, msg.sender);
             }
         } else {
             success = false;
